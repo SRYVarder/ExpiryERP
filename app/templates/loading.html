@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto flex flex-col items-center justify-center py-12 sm:py-16 text-center">
+    <div class="max-w-md w-full">
+        
+        <!-- Loading Animation Block -->
+        <div id="loading" class="space-y-6">
+            <div class="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto shadow-sm"></div>
+            <div class="space-y-2">
+                <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Loading...</h2>
+                <p class="text-slate-400 text-sm sm:text-base leading-relaxed" id="loading-text">Preparing your dashboard panel infrastructure.</p>
+            </div>
+        </div>
+
+        <!-- Success / Redirect Message Block -->
+        <div id="success" class="hidden space-y-6">
+            <div class="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/5 animate-bounce">
+                <span class="text-2xl">✅</span>
+            </div>
+            <div class="space-y-2">
+                <h2 class="text-2xl sm:text-3xl font-bold text-emerald-400 tracking-tight">Welcome back!</h2>
+                <p class="text-slate-300 text-sm sm:text-base leading-relaxed">Synchronized secure authentication tokens. Redirecting to your inventory system...</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // Managed sequence handlers to toggle layout view states automatically
+    setTimeout(() => {
+        const loadingBlock = document.getElementById('loading');
+        const successBlock = document.getElementById('success');
+        
+        if (loadingBlock && successBlock) {
+            loadingBlock.classList.add('hidden');
+            successBlock.classList.remove('hidden');
+        }
+        
+        // Execute frame redirection link loops
+        setTimeout(() => {
+            window.location.href = "{% url 'inventory:dashboard' %}";
+        }, 1500);
+    }, 1800);
+</script>
+{% endblock %}

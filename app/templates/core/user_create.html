@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6 sm:space-y-8">
+    
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div>
+            <h1 class="text-3xl sm:text-4xl font-bold text-white">Create New User</h1>
+            <p class="text-slate-400 text-sm mt-1">Only Superusers can configure and provision active warehouse system accounts.</p>
+        </div>
+        <div>
+            <a href="{% url 'core:user_list' %}" 
+               class="text-teal-400 hover:text-teal-300 font-medium text-sm flex items-center gap-1.5 transition-colors group">
+                <span class="transform group-hover:-translate-x-1 transition-transform">←</span> Back to Users
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl">
+        
+        {% if form.errors %}
+        <div class="bg-rose-950/40 border border-rose-800/60 text-rose-300 p-5 rounded-2xl mb-6 text-sm">
+            <p class="font-bold mb-2">Please correct the following errors:</p>
+            <ul class="list-disc list-inside space-y-1 text-xs sm:text-sm font-medium">
+                {% for field, errors in form.errors.items %}
+                    <li><span class="font-bold text-white uppercase tracking-wider text-xs">{{ field }}:</span> {{ errors.0 }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 django-field-wrapper [&_input]:w-full [&_input]:bg-slate-800 [&_input]:border [&_input]:border-slate-700 [&_input]:text-white [&_input]:rounded-2xl [&_input]:px-5 [&_input]:py-3.5 [&_input]:focus:outline-none [&_input]:focus:border-teal-500 [&_input]:transition-colors [&_select]:w-full [&_select]:bg-slate-800 [&_select]:border [&_select]:border-slate-700 [&_select]:text-white [&_select]:rounded-2xl [&_select]:px-5 [&_select]:py-3.5 [&_select]:focus:outline-none [&_select]:focus:border-teal-500 [&_select]:transition-colors [&_select_option]:bg-slate-900 [&_select_option]:text-white">
+                
+                <div class="flex flex-col">
+                    <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-slate-300 mb-2">
+                        Username <span class="text-rose-400">*</span>
+                    </label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                    <p class="text-rose-400 text-xs mt-1.5 font-medium">{{ form.username.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="flex flex-col">
+                    <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-slate-300 mb-2">
+                        Email Address {% if form.email.field.required %}<span class="text-rose-400">*</span>{% endif %}
+                    </label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                    <p class="text-rose-400 text-xs mt-1.5 font-medium">{{ form.email.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="flex flex-col md:col-span-2">
+                    <label for="{{ form.role.id_for_label }}" class="block text-sm font-medium text-slate-300 mb-2">
+                        System Access Role <span class="text-rose-400">*</span>
+                    </label>
+                    {{ form.role }}
+                    {% if form.role.errors %}
+                    <p class="text-rose-400 text-xs mt-1.5 font-medium">{{ form.role.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="flex flex-col">
+                    <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-slate-300 mb-2">
+                        Password <span class="text-rose-400">*</span>
+                    </label>
+                    {{ form.password1 }}
+                    {% if form.password1.errors %}
+                    <p class="text-rose-400 text-xs mt-1.5 font-medium">{{ form.password1.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="flex flex-col">
+                    <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-slate-300 mb-2">
+                        Confirm Password <span class="text-rose-400">*</span>
+                    </label>
+                    {{ form.password2 }}
+                    {% if form.password2.errors %}
+                    <p class="text-rose-400 text-xs mt-1.5 font-medium">{{ form.password2.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Branches -->
+                <div class="flex flex-col md:col-span-2 pt-2 border-t border-slate-800">
+                    <label class="block text-sm font-medium text-slate-300 mb-2">
+                        Branches
+                    </label>
+                    <p class="text-slate-500 text-xs mb-3">
+                        Required for manager/staff. Superusers can access all branches automatically.
+                    </p>
+                    <div class="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 max-h-48 overflow-y-auto space-y-2">
+                        {% for checkbox in form.branches %}
+                        <label class="flex items-center gap-3 text-slate-200 text-sm cursor-pointer hover:text-white">
+                            {{ checkbox.tag }}
+                            <span>{{ checkbox.choice_label }}</span>
+                        </label>
+                        {% empty %}
+                        <p class="text-amber-400 text-sm">No active branches. Create a branch first.</p>
+                        {% endfor %}
+                    </div>
+                    {% if form.branches.errors %}
+                    <p class="text-rose-400 text-xs mt-1.5 font-medium">{{ form.branches.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                <a href="{% url 'core:user_list' %}" 
+                   class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-6 py-3.5 rounded-2xl font-medium text-center text-sm sm:text-base w-full sm:w-auto order-2 sm:order-1 transition-colors">
+                    Cancel
+                </a>
+                <button type="submit" 
+                        class="bg-teal-600 hover:bg-teal-500 text-white px-8 py-3.5 rounded-2xl font-semibold text-center text-sm sm:text-base w-full sm:w-auto order-1 sm:order-2 transition-colors shadow-lg shadow-teal-600/10">
+                    Create Account
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

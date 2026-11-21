@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en" x-data="{ 
+    mobileMenuOpen: false, 
+    viewMode: localStorage.getItem('viewMode') || 'auto' 
+}" x-init="
+    if (viewMode === 'auto') {
+        if (window.innerWidth < 768) viewMode = 'mobile';
+        else viewMode = 'desktop';
+    }
+">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>REGON ExpiryERP</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2"></script>
+    <script src="https://unpkg.com/alpinejs" defer></script>
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #f13535, #1ef08e);
+            min-height: 100vh;
+        }
+        .nav-link {
+            transition: all 0.2s ease;
+        }
+        .nav-link:hover {
+            color: #14b8a6;
+        }
+        .active {
+            color: #14b8a6;
+            border-bottom: 3px solid #14b8a6;
+        }
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="text-white">
+
+    <!-- ===================== TOP NAVIGATION ===================== -->
+    <nav class="bg-slate-900 border-b border-slate-700 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6">
+            <div class="flex items-center justify-between h-16 gap-2">
+                
+                <!-- Left Side: Logo + Active Page Switcher -->
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <a href="{% url 'inventory:dashboard' %}" class="w-10 h-10 bg-gradient-to-tr from-red-600 to-emerald-500 rounded-2xl flex items-center justify-center text-xl sm:text-2xl font-black text-white shadow-lg tracking-wider shrink-0">
+                        SuPA
+                    </a>
+
+                    <!-- Page Navigation Switcher -->
+                    {% with url_name=request.resolver_match.url_name %}
+                    <div class="relative inline-block text-left"
+                         x-data="{ navOpen: false }"
+                         @mouseenter="navOpen = true"
+                         @mouseleave="navOpen = false">
+                        
+                        <button @click="navOpen = !navOpen" type="button"
+                                class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 rounded-xl p-1 pr-2.5 text-xs transition cursor-pointer">
+                            <span class="bg-teal-600 text-white font-medium px-2.5 py-1 rounded-lg truncate max-w-[120px] sm:max-w-[140px]">
+                                {% if url_name == 'dashboard' %}Dashboard
+                                {% elif url_name == 'product_list' %}Products
+                                {% elif url_name == 'category_list' %}Categories
+                                {% elif url_name == 'batch_list' %}Batches
+                                {% elif url_name == 'reports_dashboard' %}Reports
+                                {% elif url_name == 'scanner' %}Scanner
+                                {% elif url_name == 'user_list' %}Users
+                                {% elif url_name == 'branch_list' %}Branch
+                                {% else %}Menu{% endif %}
+                            </span>
+                            <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-150 shrink-0"
+                                 :class="navOpen ? 'rotate-180' : ''"
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        <div x-show="navOpen"
+                             x-cloak
+                             @click.away="navOpen = false"
+                             x-transition.opacity.duration.150ms
+                             class="absolute left-0 mt-1.5 w-48 bg-slate-800 border border-slate-700 rounded-xl p-1 shadow-xl z-50 text-xs">
+                            
+                            <div class="px-2.5 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                                Navigate To
+                            </div>
+
+                            <div class="flex flex-col gap-1 mt-0.5">
+                                <a href="{% url 'inventory:dashboard' %}"
+                                   class="flex items-center justify-between px-3 py-1 rounded-lg transition {% if url_name == 'dashboard' %}bg-teal-600 text-white font-medium{% else %}text-slate-400 hover:bg-slate-700 hover:text-white{% endif %}">
+                                    <span>Dashboard</span>
+                                    {% if url_name == 'dashboard' %}<span class="w-1.5 h-1.5 rounded-full bg-white"></span>{% endif %}
+                                </a>
+
+                                <a href="{% url 'inventory:product_list' %}"
+                                   class="flex items-center justify-between px-3 py-1 rounded-lg transition {% if url_name == 'product_list' %}bg-teal-600 text-white font-medium{% else %}text-slate-400 hover:bg-slate-700 hover:text-white{% endif %}">
+                                    <span>Products</span>
+                                    {% if url_name == 'product_list' %}<span class="w-1.5 h-1.5 rounded-full bg-white"></span>{% endif %}
+                                </a>
+
+                                <a href="{% url 'inventory:category_list' %}"
+                                   class="flex items-center justify-between px-3 py-1 rounded-lg transition {% if url_name == 'category_list' %}bg-teal-600 text-white font-medium{% else %}text-slate-400 hover:bg-slate-700 hover:text-white{% endif %}">
+                                    <span>Categories</span>
+                                    {% if url_name == 'category_list' %}<span class="w-1.5 h-1.5 rounded-full bg-white"></span>{% endif %}
+                                </a>
+
+                                <a href="{% url 'inventory:batch_list' %}"
+                                   class="flex items-center justify-between px-3 py-1 rounded-lg transition {% if url_name == 'batch_list' %}bg-teal-600 text-white font-medium{% else %}text-slate-400 hover:bg-slate-700 hover:text-white{% endif %}">
+                                    <span>Batches</span>
+                                    {% if url_name == 'batch_list' %}<span class="w-1.5 h-1.5 rounded-full bg-white"></span>{% endif %}
+                                </a>
+
+                                <a href="{% url 'reports:reports_dashboard' %}"
+                                   class="flex items-center justify-between px-3 py-1 rounded-lg transition {% if url_name == 'reports_dashboard' %}bg-teal-600 text-white font-medium{% else %}text-slate-400 hover:bg-slate-700 hover:text-white{% endif %}">
+                                    <span>Reports</span>
+                                    {% if url_name == 'reports_dashboard' %}<span class="w-1.5 h-1.5 rounded-full bg-white"></span>{% endif %}
+                                </a>
+
+                                <a href="{% url 'inventory:scanner' %}"
+                                   class="flex items-center justify-between px-3 py-1 rounded-lg transition {% if url_name == 'scanner' %}bg-teal-600 text-white font-medium{% else %}text-slate-400 hover:bg-slate-700 hover:text-white{% endif %}">
+                                    <span>Scanner</span>
+                                    {% if url_name == 'scanner' %}<span class="w-1.5 h-1.5 rounded-full bg-white"></span>{% endif %}
+                                </a>
+
+                                {% if user.role == 'superuser' %}
+                                <div class="my-0.5 border-t border-slate-700/70"></div>
+                                <a href="{% url 'core:user_list' %}"
+                                   class="flex items-center justify-between px-3 py-1 rounded-lg transition {% if url_name == 'user_list' %}bg-teal-600 text-white font-medium{% else %}text-slate-400 hover:bg-slate-700 hover:text-white{% endif %}">
+                                    <span>Users</span>
+                                    {% if url_name == 'user_list' %}<span class="w-1.5 h-1.5 rounded-full bg-white"></span>{% endif %}
+                                </a>
+
+                                <a href="{% url 'inventory:branch_list' %}"
+                                   class="flex items-center justify-between px-3 py-1 rounded-lg transition {% if url_name == 'branch_list' %}bg-teal-600 text-white font-medium{% else %}text-slate-400 hover:bg-slate-700 hover:text-white{% endif %}">
+                                    <span>Branch</span>
+                                    {% if url_name == 'branch_list' %}<span class="w-1.5 h-1.5 rounded-full bg-white"></span>{% endif %}
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endwith %}
+                </div>
+
+                                <!-- Right Side: View Switcher + Branch Switcher + Logout + User Info -->
+                <div class="flex items-center gap-1 sm:gap-2 lg:gap-3">
+                    
+                    <!-- View Mode Switcher -->
+                    <div class="hidden md:flex items-center gap-1 bg-slate-800 rounded-xl p-1 text-xs">
+                        <button @click="viewMode = 'auto'; localStorage.setItem('viewMode', 'auto')"
+                                :class="viewMode === 'auto' ? 'bg-teal-600 text-white' : 'text-slate-400'"
+                                class="px-3 py-1 rounded-lg transition">Auto</button>
+                        <button @click="viewMode = 'desktop'; localStorage.setItem('viewMode', 'desktop')"
+                                :class="viewMode === 'desktop' ? 'bg-teal-600 text-white' : 'text-slate-400'"
+                                class="px-3 py-1 rounded-lg transition">Desktop</button>
+                        <button @click="viewMode = 'mobile'; localStorage.setItem('viewMode', 'mobile')"
+                                :class="viewMode === 'mobile' ? 'bg-teal-600 text-white' : 'text-slate-400'"
+                                class="px-3 py-1 rounded-lg transition">Mobile</button>
+                    </div>
+
+                    <!-- Branch Switcher -->
+                    {% if user.is_authenticated and user_branches %}
+                    <div class="relative inline-block text-left"
+                         x-data="{ branchOpen: false }"
+                         @mouseenter="branchOpen = true"
+                         @mouseleave="branchOpen = false">
+                        
+                        <button @click="branchOpen = !branchOpen" type="button"
+                                class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 rounded-xl p-1 pr-2.5 text-xs transition cursor-pointer">
+                            <span class="bg-teal-600 text-white font-medium px-3 py-1 rounded-lg truncate max-w-[100px] sm:max-w-[130px]">
+                                {% if active_branch %}{{ active_branch.name }}{% else %}Select Branch{% endif %}
+                            </span>
+                            <svg class="w-3.0 h-3.5 text-slate-400 transition-transform duration-150 shrink-0"
+                                 :class="branchOpen ? 'rotate-180' : ''"
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        <div x-show="branchOpen"
+                             x-cloak
+                             @click.away="branchOpen = false"
+                             x-transition.opacity.duration.150ms
+                             class="absolute right-0 mt-1.5 w-44 bg-slate-800 border border-slate-700 rounded-xl p-1 shadow-xl z-50 text-xs">
+                            
+                            <div class="px-2.5 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                                Switch Branch
+                            </div>
+
+                            <div class="flex flex-col gap-1 mt-0.5">
+                                {% for b in user_branches %}
+                                <a href="{% url 'inventory:switch_branch' b.pk %}"
+                                   class="flex items-center justify-between px-3 py-1 rounded-lg transition
+                                          {% if active_branch and b.id == active_branch.id %}
+                                          bg-teal-600 text-white font-medium
+                                          {% else %}
+                                          text-slate-400 hover:bg-slate-700 hover:text-white
+                                          {% endif %}">
+                                    <span class="truncate">{{ b.name }}</span>
+                                    {% if active_branch and b.id == active_branch.id %}
+                                    <span class="w-1.5 h-1.5 rounded-full bg-white shrink-0"></span>
+                                    {% endif %}
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Red Logout Button -->
+                    {% if user.is_authenticated %}
+                    <form method="post" action="{% url 'logout' %}" class="inline-flex"
+                        onsubmit="return confirm('Are you sure you want to log out?');">
+                        {% csrf_token %}
+                        <button type="submit"
+                                class="bg-red-600 hover:bg-red-500 text-white font-medium px-3 py-2 rounded-xl text-xs transition shadow-sm cursor-pointer">
+                            Logout
+                        </button>
+                    </form>
+                    {% endif %}
+
+
+                    <!-- User Info -->
+                    <div class="hidden sm:block text-right">
+                        <p class="text-sm font-medium leading-tight">{{ user.username|title }}</p>
+                        <p class="text-xs text-slate-400 capitalize leading-tight">{{ user.role }}</p>
+                    </div>
+                    
+                    <div class="w-8 h-8 bg-violet-600 rounded-full flex items-center justify-center font-semibold text-sm shrink-0">
+                        {{ user.username|slice:":1"|upper }}
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ===================== MAIN CONTENT ===================== -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

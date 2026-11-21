@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div x-data="{ showDeleteModal: false, deleteUrl: '', deleteName: '' }" 
+     class="space-y-6 sm:space-y-8">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div>
+            <h1 class="text-3xl sm:text-4xl font-bold text-white">Categories</h1>
+            <p class="text-slate-400 text-sm mt-1">
+                Total: {{ total_categories }} categories
+            </p>
+        </div>
+        
+        <div class="flex flex-col sm:flex-row gap-3">
+            <a href="{% url 'inventory:category_create' %}" 
+               class="bg-teal-600 hover:bg-teal-500 px-5 py-3 rounded-2xl font-semibold text-center text-sm sm:text-base flex items-center justify-center gap-2">
+                <span class="text-lg">+</span> Add Category
+            </a>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <form method="GET" class="flex flex-col sm:flex-row gap-3">
+        <input type="text" name="search" value="{{ search_query }}"
+               placeholder="Search by category name..."
+               class="bg-slate-800 border border-slate-700 rounded-2xl px-5 py-3.5 w-full focus:outline-none focus:border-teal-500 text-white">
+        
+        <button type="submit" class="bg-teal-600 hover:bg-teal-500 px-8 py-3.5 rounded-2xl font-medium whitespace-nowrap">
+            Search
+        </button>
+    </form>
+
+    <!-- Categories Table -->
+    <div class="bg-slate-800 rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-700">
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[500px]">
+                <thead class="bg-slate-700/80">
+                    <tr>
+                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium text-teal-300">Category Name</th>
+                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium">Expiry Threshold</th>
+                        <th class="px-4 sm:px-6 py-4 text-center text-sm font-medium">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-700">
+                    {% for category in categories %}
+                    <tr class="hover:bg-slate-700/40 transition-colors">
+                        <td class="px-4 sm:px-6 py-4 font-medium text-white">
+                            {{ category.name }}
+                        </td>
+                        <td class="px-4 sm:px-6 py-4">
+                            <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1 rounded-full text-xs font-medium">
+                                ⏱️ {{ category.expiry_threshold_days }} days
+                            </span>
+                        </td>
+                        <td class="px-4 sm:px-6 py-4 text-center">
+                            <div class="flex justify-center gap-3 text-sm">
+                                <a href="{% url 'inventory:category_update' category.pk %}" 
+                                   class="text-amber-400 hover:text-amber-300">
+                                    ✏️ Edit
+                                </a>
+                                
+                                <button type="button"
+                                        data-url="{% url 'inventory:category_delete' category.pk %}" 
+                                        data-name="{{ category.name }}" 
+                                        @click="showDeleteModal = true; deleteUrl = $el.dataset.url; deleteName = $el.dataset.name" 
+                                        class="text-red-400 hover:text-red-300">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="px-6 py-16 text-center text-slate-400">
+                            No categories found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
+        <p class="text-slate-400 text-sm">
+            Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </p>
+
+        <div class="flex items-center gap-2">
+            {% if page_obj.has_previous %}
+                <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}"
+                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
+                    First
+                </a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
+                    Previous
+                </a>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <span class="px-3.5 py-2 rounded-xl bg-teal-600 text-sm font-medium">{{ num }}</span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                       class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
+                        {{ num }}
+                    </a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
+                    Next
+                </a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
+                    Last
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Delete Confirmation Modal -->
+    <div x-show="showDeleteModal" 
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+         x-cloak
+         @keydown.escape.window="showDeleteModal = false">
+        
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-6 shadow-xl"
+             @click.away="showDeleteModal = false"
+             x-transition>
+            
+            <div>
+                <h3 class="text-xl font-bold text-white">Confirm Delete</h3>
+                <p class="text-slate-400 text-sm mt-2">
+                    Are you sure you want to delete category 
+                    <span class="font-semibold text-red-400" x-text="deleteName"></span>? 
+                    This action cannot be undone.
+                </p>
+            </div>
+            
+            <div class="flex justify-end gap-3">
+                <button type="button" 
+                        @click="showDeleteModal = false" 
+                        class="bg-slate-700 hover:bg-slate-600 text-white px-5 py-2.5 rounded-xl font-medium text-sm transition-colors">
+                    Cancel
+                </button>
+                <a :href="deleteUrl" 
+                   class="bg-red-600 hover:bg-red-500 text-white px-5 py-2.5 rounded-xl font-medium text-sm text-center transition-colors">
+                    Yes, Delete
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+{% endblock %}

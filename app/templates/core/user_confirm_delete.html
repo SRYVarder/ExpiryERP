@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-6 text-white">
+    <div class="max-w-md w-full">
+        <div class="bg-slate-800 rounded-3xl p-10 text-center shadow-2xl border border-slate-700">
+            
+            <!-- Icon for Visual Warning -->
+            <div class="w-20 h-20 bg-red-600/20 border border-red-600/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://w3.org" class="h-10 w-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+
+            <h2 class="text-3xl font-bold text-red-400 mb-4">Confirm Deletion</h2>
+            
+            <p class="text-slate-300 mb-2">
+                Are you sure you want to permanently delete user:
+            </p>
+            <p class="text-xl font-mono text-teal-100 mb-8 bg-slate-900 py-2 rounded-xl border border-slate-700">
+                {{ object.username }}
+            </p>
+            
+            <div class="bg-red-900/10 border border-red-900/30 p-4 rounded-2xl mb-10">
+                <p class="text-red-400 text-xs font-bold uppercase tracking-widest">
+                    Warning: This action cannot be undone
+                </p>
+            </div>
+
+            <form method="post" class="flex flex-col sm:flex-row justify-center gap-4">
+                {% csrf_token %}
+                <button type="submit" class="flex-1 bg-red-600 hover:bg-red-500 px-8 py-4 rounded-2xl font-bold transition-all shadow-lg hover:-translate-y-0.5">
+                    Delete User
+                </button>
+                <a href="{% url 'core:user_list' %}" class="flex-1 bg-slate-700 hover:bg-slate-600 px-8 py-4 rounded-2xl font-semibold transition-all text-center">
+                    Cancel
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,26 @@
+# Testing dependencies
+-r base.txt
+
+# Core Testing Framework
+pytest==8.3.*
+pytest-django==4.8.*
+pytest-cov==5.0.*
+pytest-xdist==3.6.*           # Run tests in parallel
+pytest-factoryboy==2.7.*
+
+# Test Data & Factories
+factory-boy==3.3.*
+faker==25.9.*
+
+# Code Quality & Linting during tests
+flake8==7.1.*
+flake8-django==1.1.*
+isort==5.13.*
+black==24.8.*
+
+# Django Testing Tools
+django-test-plus==3.0.*
+model-bakery==1.13.*
+
+# Coverage & Reporting
+coverage==7.6.*

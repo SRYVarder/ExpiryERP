@@ -1,0 +1,128 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Environment variables
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Virtual Environment
+pip-log.txt
+pip-delete-this-directory.txt
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Redis dump
+dump.rdb
+
+# Logs
+logs/
+*.log
+log/
+
+# Database backups
+*.bak
+*.dump
+*.sql
+
+# Tailwind / Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.cache/
+.parcel-cache/
+
+# Coverage & Testing
+.coverage
+htmlcov/
+.tox/
+.nox/
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Django Migrations (sometimes useful to ignore, but usually keep)
+# */migrations/__pycache__/
+
+# Production collected static (if using collectstatic locally)
+static/
+
+# Docker
+.docker/
+.dockerignore
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# VS Code specific
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json*

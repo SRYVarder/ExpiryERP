@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div x-data="{ showDeleteModal: false, deleteUrl: '', deleteName: '' }" class="space-y-6 sm:space-y-8">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div>
+            <h1 class="text-3xl sm:text-4xl font-bold text-white">Branches</h1>
+            <p class="text-slate-400 text-sm mt-1">Total: {{ total_count }} branches</p>
+        </div>
+        
+        <div class="flex flex-col sm:flex-row gap-3">
+            <a href="{% url 'inventory:branch_create' %}" 
+               class="bg-teal-600 hover:bg-teal-500 px-5 py-3 rounded-2xl font-semibold text-center text-sm sm:text-base flex items-center justify-center gap-2 transition">
+                <span class="text-lg">+</span> Add Branch
+            </a>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <form method="GET" class="flex flex-col sm:flex-row gap-3">
+        <input type="text" name="search" value="{{ search_query }}"
+               placeholder="Search by Branch Name or Code..."
+               class="bg-slate-800 border border-slate-700 rounded-2xl px-5 py-3.5 w-full focus:outline-none focus:border-teal-500 text-white">
+
+        <button type="submit" class="bg-teal-600 hover:bg-teal-500 px-8 py-3.5 rounded-2xl font-medium whitespace-nowrap transition">
+            Search
+        </button>
+    </form>
+
+    <!-- Branches Table -->
+    <div class="bg-slate-800 rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-700">
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[700px]">
+                <thead class="bg-slate-700/80">
+                    <tr>
+                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium text-teal-300">Code</th>
+                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium">Branch Name</th>
+                        <th class="px-4 sm:px-6 py-4 text-center text-sm font-medium">Status</th>
+                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium">Created</th>
+                        <th class="px-4 sm:px-6 py-4 text-center text-sm font-medium">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-700">
+                    {% for branch in branches %}
+                    <tr class="hover:bg-slate-700/40 transition-colors">
+                        <td class="px-4 sm:px-6 py-4 font-mono text-emerald-400 text-sm">
+                            {{ branch.code|default:"—" }}
+                        </td>
+                        <td class="px-4 sm:px-6 py-4 font-medium">
+                            {{ branch.name }}
+                            {% if active_branch and branch.id == active_branch.id %}
+                                <span class="ml-2 bg-teal-600/30 text-teal-300 border border-teal-500/40 px-2.5 py-0.5 rounded-full text-xs">
+                                    Current
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 sm:px-6 py-4 text-center text-sm">
+                            {% if branch.is_active %}
+                                <span class="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-xs font-medium">Active</span>
+                            {% else %}
+                                <span class="bg-slate-600 text-slate-300 px-3 py-1 rounded-full text-xs font-medium">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 sm:px-6 py-4 text-sm text-slate-300">
+                            {{ branch.created_at|date:"M d, Y" }}
+                        </td>
+                        <td class="px-4 sm:px-6 py-4 text-center">
+                            <div class="flex justify-center gap-3 text-sm">
+                                {% if branch.is_active %}
+                                <a href="{% url 'inventory:switch_branch' branch.pk %}" class="text-violet-400 hover:text-violet-300">🔄 Switch</a>
+                                {% endif %}
+                                <a href="{% url 'inventory:branch_update' branch.pk %}" class="text-amber-400 hover:text-amber-300">✏️ Edit</a>
+                                <button type="button"
+                                        @click="showDeleteModal = true; deleteUrl = '{% url 'inventory:branch_delete' branch.pk %}'; deleteName = '{{ branch.name|escapejs }}'"
+                                        class="text-red-400 hover:text-red-300">🗑️ Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-16 text-center text-slate-400">
+                            No branches found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
+        <p class="text-slate-400 text-sm">
+            Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </p>
+
+        <div class="flex items-center gap-2">
+            {% if page_obj.has_previous %}
+                <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}"
+                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
+                    First
+                </a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
+                    Previous
+                </a>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <span class="px-3.5 py-2 rounded-xl bg-teal-600 text-sm font-medium">{{ num }}</span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                       class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
+                        {{ num }}
+                    </a>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
+                    Next
+                </a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
+                    Last
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Delete Confirmation Modal -->
+    <div x-show="showDeleteModal"
+         x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+        <div @click.away="showDeleteModal = false"
+             class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <h2 class="text-xl font-bold text-white">Delete Branch</h2>
+            <p class="text-slate-300 text-sm">
+                Are you sure you want to delete <span class="font-semibold text-white" x-text="deleteName"></span>? Branches with existing products cannot be deleted.
+            </p>
+            <form :action="deleteUrl" method="POST" class="flex justify-end gap-3 pt-2">
+                {% csrf_token %}
+                <button type="button" @click="showDeleteModal = false"
+                        class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-medium">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-sm font-semibold text-white">
+                    Delete
+                </button>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

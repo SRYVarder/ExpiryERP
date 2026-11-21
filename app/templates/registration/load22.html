@@ -1,0 +1,69 @@
+{% extends 'base.html' %} 
+
+{% block content %} 
+<div class="max-w-4xl mx-auto bg-slate-800 rounded-3xl p-8"> 
+    <h1 class="text-3xl font-bold mb-8">{{ title|default:"Create New Batch" }}</h1> 
+    
+    <form method="post"> 
+        {% csrf_token %} 
+        
+        <!-- Searchable Product Field --> 
+        <div class="mb-8"> 
+            <label class="block text-sm font-medium text-slate-300 mb-2"> 
+                Product <span class="text-red-400">*</span> 
+            </label> 
+            <input list="productList" id="productInput" name="product" placeholder="Search by icode or product name..." class="bg-slate-700 text-white border border-slate-600 rounded-xl px-4 py-3 w-full focus:border-teal-500 outline-none" required onchange="updateSelectedProduct(this)"> 
+            <datalist id="productList"> 
+                {% for product in form.product.field.queryset %} 
+                <option value="{{ product.pk }} {{ product.name }}" label="{{ product.icode }} - {{ product.name }}"> 
+                {% endfor %} 
+            </datalist> 
+            
+            <!-- Show selected product name --> 
+            <div id="selected-product" class="mt-3 p-4 bg-slate-900 rounded-2xl border border-teal-500/30 hidden"> 
+                <span class="text-teal-400 text-sm">Selected Product:</span><br> 
+                <span id="selected-name" class="font-medium"></span> 
+            </div> 
+        </div> 
+
+        <!-- Other Fields Layout --> 
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6"> 
+            {% for field in form %} 
+                {% if field.name != 'product' %} 
+                <div class="mb-6"> 
+                    {{ field.label_tag }} 
+                    {{ field }} 
+                    {% if field.help_text %} 
+                    <small class="text-slate-400">{{ field.help_text }}</small> 
+                    {% endif %} 
+                </div> 
+                {% endif %} 
+            {% endfor %} 
+        </div> 
+
+        <button type="submit" class="mt-8 bg-teal-600 hover:bg-teal-500 px-10 py-4 rounded-2xl font-semibold text-lg"> 
+            Save Batch 
+        </button> 
+            <a href="{% url 'inventory:batch_list' %}" 
+               class="bg-slate-700 hover:bg-slate-600 px-10 py-4 rounded-2xl">
+                Cancel
+            </a>
+    </form> 
+</div> 
+{% endblock %} 
+
+{% block extra_js %} 
+<script> 
+function updateSelectedProduct(input) { 
+    const displayDiv = document.getElementById('selected-product'); 
+    const nameSpan = document.getElementById('selected-name'); 
+    const option = document.querySelector(`#productList option[value="${input.value}"]`); 
+    if (option && option.label) { 
+        nameSpan.textContent = option.label; 
+        displayDiv.classList.remove('hidden'); 
+    } else { 
+        displayDiv.classList.add('hidden'); 
+    } 
+} 
+</script> 
+{% endblock %}

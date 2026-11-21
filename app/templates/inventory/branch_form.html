@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6 sm:space-y-8">
+
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+        <div>
+            <h1 class="text-3xl sm:text-4xl font-bold text-white">
+                {{ title|default:"Branch" }}
+            </h1>
+            <p class="text-slate-400 text-sm mt-1">
+                Warehouse or store location
+            </p>
+        </div>
+        <a href="{% url 'inventory:branch_list' %}"
+           class="bg-slate-700 hover:bg-slate-600 text-white px-5 py-2.5 rounded-2xl text-sm font-medium transition-all">
+            ← Back to Branches
+        </a>
+    </div>
+
+    <div class="bg-slate-800 rounded-2xl sm:rounded-3xl border border-slate-700 p-6 sm:p-8">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            {% for field in form %}
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">
+                    {{ field.label }}
+                    {% if field.field.required %}<span class="text-red-400">*</span>{% endif %}
+                </label>
+                {{ field }}
+                {% if field.help_text %}
+                    <p class="text-slate-500 text-xs mt-1">{{ field.help_text }}</p>
+                {% endif %}
+                {% if field.errors %}
+                    <p class="text-red-400 text-sm mt-1">{{ field.errors.0 }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                <button type="submit"
+                        class="bg-teal-600 hover:bg-teal-500 px-8 py-3.5 rounded-2xl font-semibold transition-colors">
+                    Save Branch
+                </button>
+                <a href="{% url 'inventory:branch_list' %}"
+                   class="bg-slate-700 hover:bg-slate-600 px-8 py-3.5 rounded-2xl font-medium text-center transition-colors">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

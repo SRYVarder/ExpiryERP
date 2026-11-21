@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="space-y-6 sm:space-y-8">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+        <div>
+            <h1 class="text-3xl sm:text-4xl font-bold text-white flex items-center gap-3">
+                <span>🛎️</span> Notifications
+            </h1>
+            <p class="text-slate-400 mt-1 text-sm sm:text-base">
+                Stay updated with expiry alerts and system notifications
+            </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+            {% if unread_count > 0 %}
+            <a href="{% url 'alerts:mark_all_as_read' %}" 
+               class="bg-slate-700 hover:bg-slate-600 text-white px-5 py-2.5 rounded-2xl text-sm font-medium transition-all">
+                Mark All as Read
+            </a>
+            {% endif %}
+
+            <form method="post" action="{% url 'alerts:delete_read_notifications' %}" class="inline">
+                {% csrf_token %}
+                <button type="submit"
+                        onclick="return confirm('Delete all read notifications?')"
+                        class="bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white px-5 py-2.5 rounded-2xl text-sm font-medium transition-all border border-red-500/30">
+                    Clear Read
+                </button>
+            </form>
+
+            <a href="{% url 'inventory:dashboard' %}" 
+               class="bg-slate-700 hover:bg-slate-600 text-white px-5 py-2.5 rounded-2xl text-sm font-medium transition-all">
+                ← Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Notifications List -->
+    {% if notifications %}
+    <div class="space-y-4">
+        {% for notification in notifications %}
+        <div class="bg-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border 
+                    {% if not notification.is_read %}border-teal-500/50{% else %}border-slate-700{% endif %}
+                    hover:border-slate-600 transition-all">
+            
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                <div class="flex-1">
+                    <!-- Type + Time -->
+                    <div class="flex flex-wrap items-center gap-3 mb-3">
+                        {% if notification.notification_type == 'near_expiry' %}
+                            <span class="bg-amber-500/20 text-amber-400 text-xs px-3 py-1 rounded-full font-medium">
+                                NEAR EXPIRY
+                            </span>
+                        {% elif notification.notification_type == 'expired' %}
+                            <span class="bg-red-500/20 text-red-400 text-xs px-3 py-1 rounded-full font-medium">
+                                EXPIRED
+                            </span>
+                        {% else %}
+                            <span class="bg-slate-500/20 text-slate-400 text-xs px-3 py-1 rounded-full font-medium">
+                                ALERT
+                            </span>
+                        {% endif %}
+
+                        <span class="text-slate-500 text-sm">
+                            {{ notification.created_at|timesince }} ago
+                        </span>
+
+                        {% if not notification.is_read %}
+                            <span class="w-2 h-2 bg-teal-400 rounded-full"></span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Title & Message -->
+                    <h3 class="text-lg sm:text-xl font-semibold text-white">
+                        {{ notification.title }}
+                    </h3>
+                    <p class="text-slate-300 mt-2 text-sm sm:text-base leading-relaxed">
+                        {{ notification.message }}
+                    </p>
+
+                    <!-- Batch Info -->
+                    {% if notification.batch %}
+                    <p class="mt-4 text-teal-400 text-sm">
+                        Batch: <span class="font-mono">{{ notification.batch.batch_number }}</span>
+                        • {{ notification.batch.product.name }}
+                    </p>
+                    {% endif %}
+                </div>
+
+                <!-- Actions -->
+                <div class="flex sm:flex-col items-start sm:items-end gap-3">
+                    {% if not notification.is_read %}
+                    <a href="{% url 'alerts:mark_as_read' notification.pk %}" 
+                       class="text-teal-400 hover:text-teal-300 text-sm font-medium whitespace-nowrap">
+                        Mark as Read
+                    </a>
+                    {% endif %}
+
+                    <!-- Individual Delete Button -->
+                    <form method="post" action="{% url 'alerts:delete_notification' notification.pk %}">
+                        {% csrf_token %}
+                        <button type="submit"
+                                onclick="return confirm('Delete this notification?')"
+                                class="text-red-400 hover:text-red-300 text-sm font-medium whitespace-nowrap">
+                            Delete
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="bg-slate-800 rounded-2xl sm:rounded-3xl p-12 sm:p-16 text-center">
+        <p class="text-4xl mb-4">🎉</p>
+        <p class="text-slate-300 text-lg font-medium">No notifications yet</p>
+        <p class="text-slate-500 mt-2 text-sm">
+            We'll notify you about near-expiry and expired batches here.
+        </p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

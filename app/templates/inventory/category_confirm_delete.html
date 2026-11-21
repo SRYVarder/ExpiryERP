@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white">
+    <div class="max-w-md mx-auto text-center">
+        <div class="bg-slate-800 rounded-3xl p-10">
+            <h2 class="text-3xl font-bold text-red-400 mb-6">Delete Category?</h2>
+            
+            <p class="text-lg mb-8">
+                Are you sure you want to delete the category 
+                <strong class="text-white">"{{ object.name }}"</strong>?
+            </p>
+            
+            <p class="text-slate-400 mb-10 text-sm">
+                This action cannot be undone. All products in this category will have no category assigned.
+            </p>
+            
+            <form method="post" class="flex justify-center gap-4">
+                {% csrf_token %}
+                <button type="submit" 
+                        class="bg-red-600 hover:bg-red-700 px-8 py-4 rounded-2xl font-semibold transition-colors">
+                    Yes, Delete Category
+                </button>
+                <a href="{% url 'inventory:category_list' %}" 
+                   class="bg-slate-700 hover:bg-slate-600 px-8 py-4 rounded-2xl transition-colors">
+                    Cancel
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

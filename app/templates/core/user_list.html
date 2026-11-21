@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div x-data="{ showDeleteModal: false, deleteUrl: '', deleteName: '' }" class="space-y-6 sm:space-y-8">
+    
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div>
+            <h1 class="text-3xl sm:text-4xl font-bold text-white">User Management</h1>
+            <p class="text-slate-400 text-sm mt-1">
+                Manage accounts, roles, and branch access.
+                {% if total_count %} · Total: {{ total_count }}{% endif %}
+            </p>
+        </div>
+        {% if user.role == 'superuser' or user.is_superuser %}
+        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <a href="{% url 'core:user_create' %}" 
+               class="bg-teal-600 hover:bg-teal-500 text-white px-5 py-3 rounded-2xl font-semibold text-center text-sm sm:text-base flex items-center justify-center gap-2 transition-colors shadow-lg shadow-teal-600/10">
+                <span class="text-lg">+</span> Create New User
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="overflow-x-auto bg-slate-900 border border-slate-800 rounded-2xl">
+        <table class="w-full text-left border-collapse min-w-[700px]">
+            <thead>
+                <tr class="border-b border-slate-800 bg-slate-900/50 text-slate-400 text-sm font-medium">
+                    <th class="p-4 sm:p-5">Username</th>
+                    <th class="p-4 sm:p-5">Email Address</th>
+                    <th class="p-4 sm:p-5">Access Role</th>
+                    <th class="p-4 sm:p-5">Branches</th>
+                    <th class="p-4 sm:p-5">Date Joined</th>
+                    <th class="p-4 sm:p-5 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800 text-slate-300 text-sm sm:text-base">
+                {% for u in users %}
+                <tr class="hover:bg-slate-800/30 transition-colors">
+                    <td class="p-4 sm:p-5 font-medium text-white">
+                        {{ u.username }}
+                    </td>
+                    <td class="p-4 sm:p-5 font-mono text-sm text-slate-400">
+                        {{ u.email|default:"—" }}
+                    </td>
+                    <td class="p-4 sm:p-5">
+                        {% if u.role == 'superuser' or u.is_superuser %}
+                            <span class="inline-flex items-center bg-violet-500/10 text-violet-400 border border-violet-500/20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                                Superuser
+                            </span>
+                        {% elif u.role == 'manager' %}
+                            <span class="inline-flex items-center bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                                Manager
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center bg-slate-700/30 text-slate-400 border border-slate-700/50 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                                Staff
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="p-4 sm:p-5 text-sm">
+                        {% if u.is_superuser or u.role == 'superuser' %}
+                            <span class="text-teal-400 text-xs font-medium">All branches</span>
+                        {% else %}
+                            <div class="flex flex-wrap gap-1">
+                                {% for b in u.branches.all %}
+                                    <span class="inline-block bg-slate-800 text-slate-300 border border-slate-700 text-xs px-2 py-0.5 rounded-lg">{{ b.name }}</span>
+                                {% empty %}
+                                    <span class="text-rose-400 text-xs">None</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td class="p-4 sm:p-5 text-sm text-slate-400">
+                        {{ u.date_joined|date:"d M Y" }}
+                    </td>
+                    <td class="p-4 sm:p-5 text-right">
+                        <div class="flex items-center justify-end gap-4">
+                        {% if user.role == 'superuser' or user.is_superuser %}
+                            {% if u != user %}
+                            <a href="{% url 'core:user_update' u.pk %}" 
+                               class="text-slate-400 hover:text-white transition-colors p-1 font-medium text-sm sm:text-base"
+                               title="Edit User / Branches">
+                                ✏️ Edit
+                            </a>
+                            <button type="button"
+                                    data-url="{% url 'core:user_delete' u.pk %}" 
+                                    data-name="{{ u.username }}" 
+                                    @click="showDeleteModal = true; deleteUrl = $el.dataset.url; deleteName = $el.dataset.name" 
+                                    class="text-rose-400 hover:text-rose-300 transition-colors p-1 font-medium text-sm sm:text-base"
+                                    title="Delete User">
+                                🗑️ Delete
+                            </button>
+                            {% else %}
+                            <a href="{% url 'core:user_update' u.pk %}" 
+                               class="text-slate-400 hover:text-white transition-colors p-1 font-medium text-sm"
+                               title="Edit own profile">
+                                ✏️ Edit
+                            </a>
+                            <span class="text-slate-600 text-xs font-medium italic">🔒 Self</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-slate-600 text-xs font-medium italic select-none uppercase tracking-wider px-2 py-1 bg-slate-950/40 rounded-xl border border-slate-800/40">🔒 Protected</span>
+                        {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="p-12 text-center text-slate-500">
+                        No active users found registered in system databases.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div x-show="showDeleteModal" 
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+         x-cloak
+         @keydown.escape.window="showDeleteModal = false">
+        
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-6 shadow-xl"
+             @click.away="showDeleteModal = false"
+             x-transition>
+            
+            <div>
+                <h3 class="text-xl font-bold text-white">Delete System User?</h3>
+                <p class="text-slate-400 text-sm mt-2">
+                    Are you sure you want to delete profile <span class="font-semibold text-rose-400" x-text="deleteName"></span>?
+                </p>
+            </div>
+            
+            <div class="flex justify-end gap-3">
+                <button type="button" 
+                        @click="showDeleteModal = false" 
+                        class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-5 py-2.5 rounded-xl font-medium text-sm transition-colors">
+                    Cancel
+                </button>
+                <a :href="deleteUrl" 
+                   class="bg-rose-600 hover:bg-rose-500 text-white px-5 py-2.5 rounded-xl font-medium text-sm text-center transition-colors">
+                    Yes, Delete User
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+{% endblock %}

@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6 sm:space-y-8">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div>
+            <h1 class="text-3xl sm:text-4xl font-bold text-white">Barcode / QR Scanner</h1>
+            <p class="text-slate-400 text-sm mt-1">
+                Point your camera at a barcode or type the code manually below.
+            </p>
+        </div>
+        <a href="{% url 'inventory:dashboard' %}" 
+           class="bg-slate-700 hover:bg-slate-600 text-white px-5 py-2.5 rounded-2xl text-sm font-medium transition-all">
+            ← Dashboard
+        </a>
+    </div>
+
+    <!-- Scanner Viewport -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-8 shadow-2xl">
+        <div id="reader" 
+             class="w-full aspect-square max-w-md mx-auto rounded-2xl overflow-hidden border border-teal-500/40 bg-slate-950 shadow-inner">
+        </div>
+
+        <p id="scanner-status" class="text-center text-slate-400 text-sm mt-4">
+            Starting camera...
+        </p>
+    </div>
+
+    <!-- Manual Entry -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-8 shadow-2xl space-y-4">
+        <h3 class="text-base font-semibold text-white flex items-center gap-2">
+            <span>⌨️</span> Manual Code Entry
+        </h3>
+        <p class="text-slate-400 text-sm">
+            If the camera cannot read the barcode clearly, type the code manually.
+        </p>
+        
+        <form id="manualCodeForm" onsubmit="handleManualSubmit(event)" class="pt-2">
+            <label for="manualCodeInput" class="block text-sm font-medium text-slate-300 mb-2">
+                Barcode / S-Code / Batch Number
+            </label>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <input type="text" id="manualCodeInput" 
+                       placeholder="e.g. 615110001234 or B-102" required
+                       class="bg-slate-800 border border-slate-700 text-white rounded-2xl px-5 py-3.5 w-full focus:outline-none focus:border-teal-500 transition-colors font-mono">
+                <button type="submit" 
+                        class="bg-teal-600 hover:bg-teal-500 text-white px-8 py-3.5 rounded-2xl font-semibold whitespace-nowrap transition-colors">
+                    Submit Code
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Instructions -->
+    <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 sm:p-6">
+        <h3 class="font-bold text-white mb-3 text-base flex items-center gap-2">
+            <span>ℹ️</span> Tips for best results
+        </h3>
+        <ul class="space-y-2 text-slate-400 text-sm">
+            <li class="flex items-start gap-2.5">
+                <span class="text-teal-500 font-bold">•</span>
+                <span>Use <strong>HTTPS</strong> or <strong>localhost</strong> (camera will not work on plain HTTP).</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+                <span class="text-teal-500 font-bold">•</span>
+                <span>Hold the barcode steady and fill most of the scanning square.</span>
+            </li>
+            <li class="flex items-start gap-2.5">
+                <span class="text-teal-500 font-bold">•</span>
+                <span>Allow camera permission when the browser asks.</span>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Result Area -->
+    <div id="result" class="hidden bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4 shadow-xl">
+        <div>
+            <span class="text-teal-400 text-xs font-semibold uppercase tracking-wider">
+                Scanned Successfully
+            </span>
+            <div id="scanned-code" 
+                 class="mt-2 p-4 bg-slate-950 rounded-xl font-mono text-sm sm:text-base text-emerald-400 border border-slate-800 break-all">
+            </div>
+        </div>
+        
+        <div class="flex flex-col sm:flex-row gap-3 pt-2">
+            <button type="button" onclick="resetScanner()" 
+                    class="bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-2xl font-semibold text-sm flex-1">
+                Scan Another
+            </button>
+            <button type="button" id="search-btn"
+                    class="bg-teal-600 hover:bg-teal-500 text-white px-6 py-3 rounded-2xl font-semibold text-sm flex-1">
+                Search Product
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<!-- Load the real scanner library -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<script>
+    let html5QrCode = null;
+    let lastScannedCode = "";
+
+    const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0
+    };
+
+    function updateStatus(message) {
+        const statusEl = document.getElementById("scanner-status");
+        if (statusEl) statusEl.textContent = message;
+    }
+
+    function startScanner() {
+        if (html5QrCode) {
+            html5QrCode.clear().catch(() => {});
+        }
+
+        html5QrCode = new Html5Qrcode("reader");
+        updateStatus("Requesting camera access...");
+
+        // Prefer back camera on mobile
+        html5QrCode.start(
+            { facingMode: "environment" },
+            config,
+            onScanSuccess,
+            () => {} // ignore continuous scan failures
+        ).then(() => {
+            updateStatus("Camera ready — point at a barcode");
+        }).catch((err) => {
+            console.warn("Back camera failed, trying any camera...", err);
+            updateStatus("Trying alternative camera...");
+
+            html5QrCode.start(
+                { facingMode: "user" },
+                config,
+                onScanSuccess,
+                () => {}
+            ).then(() => {
+                updateStatus("Camera ready — point at a barcode");
+            }).catch((fallbackErr) => {
+                console.error("Camera error:", fallbackErr);
+                updateStatus("Camera access failed. Please use manual entry or allow camera permission.");
+            });
+        });
+    }
+
+    function stopScanner() {
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().catch(() => {});
+        }
+    }
+
+    function onScanSuccess(decodedText) {
+        // Prevent multiple rapid triggers
+        if (decodedText === lastScannedCode) return;
+        lastScannedCode = decodedText;
+
+        stopScanner();
+        updateStatus("Code detected!");
+
+        document.getElementById("result").classList.remove("hidden");
+        document.getElementById("scanned-code").textContent = decodedText;
+
+        // Auto-search after a short delay
+        setTimeout(() => {
+            searchCode(decodedText);
+        }, 800);
+    }
+
+    function handleManualSubmit(event) {
+        event.preventDefault();
+        const value = document.getElementById("manualCodeInput").value.trim();
+        if (value) {
+            onScanSuccess(value);
+        }
+    }
+
+    function searchCode(code) {
+        // Redirect to product list searching by the scanned code (S-code / barcode)
+        window.location.href = "{% url 'inventory:batch_list' %}?search=" + encodeURIComponent(code);
+    }
+
+    function resetScanner() {
+        lastScannedCode = "";
+        document.getElementById("result").classList.add("hidden");
+        document.getElementById("manualCodeInput").value = "";
+        document.getElementById("scanned-code").textContent = "";
+        startScanner();
+    }
+
+    // Wire up the Search button
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("search-btn").addEventListener("click", () => {
+            if (lastScannedCode) {
+                searchCode(lastScannedCode);
+            }
+        });
+
+        // Start camera after page is ready
+        setTimeout(startScanner, 300);
+    });
+</script>
+{% endblock %}

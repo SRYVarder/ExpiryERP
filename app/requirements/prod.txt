@@ -1,0 +1,9 @@
+# Production dependencies - Minimal & Secure
+-r base.txt
+
+# Production optimizations
+gunicorn==23.0.*
+uvicorn[standard]==0.30.*     # Alternative to gunicorn if using ASGI
+
+# Security & Monitoring
+sentry-sdk==2.14.*            # Optional but highly recommended

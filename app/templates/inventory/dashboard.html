@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="space-y-6 sm:space-y-8">
+
+    <!-- Welcome Header + Manual Check Button -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+        <div>
+            <h1 class="text-3xl sm:text-4xl font-bold text-white">
+                Good morning, {{ user.username|title }} 👋
+            </h1>
+            <p class="text-slate-400 mt-1 text-sm sm:text-base">
+                Here's what's happening with your inventory today
+            </p>
+        </div>
+        
+        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <form method="post" action="{% url 'inventory:run_expiry_check' %}">
+                {% csrf_token %}
+                <button type="submit" 
+                        class="bg-green-600 hover:bg-amber-500 px-5 sm:px-6 py-2.5 sm:py-3 rounded-2xl font-semibold flex items-center gap-2 transition-all text-sm sm:text-base">
+                    <span>🔄</span> Run Expiry Check Now
+                </button>
+            </form>
+            
+            <div class="text-left sm:text-right">
+                <p class="text-sm text-slate-400">Today</p>
+                <p class="text-xl sm:text-2xl font-semibold text-red-700">{{ today|date:"d F Y" }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div class="bg-slate-800 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-cyan-500/30 hover:border-cyan-500 transition-all">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-cyan-400 text-xs sm:text-sm font-medium tracking-widest">TOTAL PRODUCTS</p>
+                    <p class="text-4xl sm:text-5xl font-bold mt-3 sm:mt-4">{{ total_products }}</p>
+                </div>
+                <span class="text-3xl sm:text-4xl">📦</span>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-emerald-500/30 hover:border-emerald-500 transition-all">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-emerald-400 text-xs sm:text-sm font-medium tracking-widest">STOCK ON HAND</p>
+                    <p class="text-4xl sm:text-5xl font-bold mt-3 sm:mt-4">{{ total_soh }}</p>
+                </div>
+                <span class="text-3xl sm:text-4xl">📊</span>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-amber-500/30 hover:border-amber-500 transition-all">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-amber-400 text-xs sm:text-sm font-medium tracking-widest">NEAR EXPIRY</p>
+                    <p class="text-4xl sm:text-5xl font-bold mt-3 sm:mt-4 text-amber-400">{{ near_expiry }}</p>
+                </div>
+                <span class="text-3xl sm:text-4xl">⏰</span>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-red-500/30 hover:border-red-500 transition-all">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-red-400 text-xs sm:text-sm font-medium tracking-widest">EXPIRED</p>
+                    <p class="text-4xl sm:text-5xl font-bold mt-3 sm:mt-4 text-red-400">{{ expired }}</p>
+                </div>
+                <span class="text-3xl sm:text-4xl">⚠️</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Two equal tables -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
+
+        <!-- Expiring Soon Table -->
+        <div class="lg:col-span-6 bg-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8 flex flex-col">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5">
+                <h2 class="text-xl sm:text-2xl font-semibold text-amber-400 flex items-center gap-2">
+                    <span>🔥</span> Expiring Soon (FEFO)
+                </h2>
+                <a href="{% url 'inventory:expiring_soon' %}" 
+                   class="text-cyan-400 hover:text-cyan-300 text-sm font-medium">
+                    View All →
+                </a>
+            </div>
+            
+            <div class="overflow-auto custom-scrollbar flex-1 max-h-[520px]">
+                <table class="w-full min-w-[580px]">
+                    <thead class="sticky top-0 bg-slate-800 z-10">
+                        <tr class="border-b border-slate-700 text-slate-400 text-sm">
+                            <th class="py-3 text-left">Product</th>
+                            <th class="py-3 text-left">Batch</th>
+                            <th class="py-3 text-left">Expiry Date</th>
+                            <th class="py-3 text-left">Days Left</th>
+                            <th class="py-3 text-right">Quantity</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-700">
+                        {% for batch in expiring_soon %}
+                        <tr class="hover:bg-slate-700/50 transition-colors">
+                            <td class="py-4">
+                                <span class="font-mono text-teal-300 text-sm">{{ batch.product.icode }}</span>
+                                <div class="text-sm text-white">{{ batch.product.name }}</div>
+                            </td>
+                            <td class="py-4 font-mono text-sm">{{ batch.batch_number }}</td>
+                            <td class="py-4 text-slate-300 text-sm">{{ batch.expiry_date }}</td>
+                            <td class="py-4">
+                                <span class="{{ batch.get_expiry_color }} font-medium text-sm">
+                                    {{ batch.expiry_status_display }}
+                                </span>
+                            </td>
+                            <td class="py-4 text-right font-semibold">{{ batch.current_quantity }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="py-16 text-center text-slate-400">
+                                No batches are expiring soon.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Expired Batches Table -->
+        <div class="lg:col-span-6 bg-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8 flex flex-col">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5">
+                <h2 class="text-xl sm:text-2xl font-semibold text-red-400 flex items-center gap-2">
+                    <span>⚠️</span> Expired Batches
+                </h2>
+                <a href="{% url 'inventory:expired_batches' %}" 
+                   class="text-cyan-400 hover:text-cyan-300 text-sm font-medium">
+                    View All →
+                </a>
+            </div>
+            
+            <div class="overflow-auto custom-scrollbar flex-1 max-h-[520px]">
+                <table class="w-full min-w-[580px]">
+                    <thead class="sticky top-0 bg-slate-800 z-10">
+                        <tr class="border-b border-slate-700 text-slate-400 text-sm">
+                            <th class="py-3 text-left">Product</th>
+                            <th class="py-3 text-left">Batch</th>
+                            <th class="py-3 text-left">Expiry Date</th>
+                            <th class="py-3 text-left">Days Expired</th>
+                            <th class="py-3 text-right">Quantity</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-700">
+                        {% for batch in expired_batches %}
+                        <tr class="hover:bg-slate-700/50 transition-colors">
+                            <td class="py-4">
+                                <span class="font-mono text-teal-300 text-sm">{{ batch.product.icode }}</span>
+                                <div class="text-sm text-white">{{ batch.product.name }}</div>
+                            </td>
+                            <td class="py-4 font-mono text-sm">{{ batch.batch_number }}</td>
+                            <td class="py-4 text-slate-300 text-sm">{{ batch.expiry_date }}</td>
+                            <td class="py-4">
+                                <span class="text-red-400 font-medium text-sm">
+                                    {{ batch.days_to_expiry }} days ago
+                                </span>
+                            </td>
+                            <td class="py-4 text-right font-semibold">{{ batch.current_quantity }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="py-16 text-center text-slate-400">
+                                No expired batches at the moment.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== RECENT ALERTS ==================== -->
+    <div class="bg-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+            <h2 class="text-xl sm:text-2xl font-semibold text-white flex items-center gap-2">
+                <span>🛎️</span> Recent Alerts
+            </h2>
+
+            <div class="flex items-center gap-3">
+                {% if unread_count > 0 %}
+                <span class="bg-red-500/20 text-red-400 px-3 py-1 text-xs rounded-full font-medium">
+                    {{ unread_count }} new
+                </span>
+                {% endif %}
+                <a href="{% url 'alerts:notification_list' %}" 
+                   class="text-cyan-400 hover:text-cyan-300 text-sm font-medium">
+                    View All →
+                </a>
+            </div>
+        </div>
+
+        {% if notifications %}
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {% for n in notifications %}
+            <div class="bg-slate-900 rounded-2xl p-5 border-l-4 
+                        {% if n.notification_type == 'expired' %}border-red-500
+                        {% else %}border-amber-500{% endif %}
+                        hover:bg-slate-900/80 transition-colors">
+                <div class="font-medium text-white text-sm">{{ n.title }}</div>
+                <p class="text-slate-400 text-xs mt-2 line-clamp-2">{{ n.message }}</p>
+                <p class="text-xs text-slate-500 mt-3">{{ n.created_at|timesince }} ago</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <p class="text-3xl mb-3">🎉</p>
+            <p class="text-slate-400">All caught up! No recent alerts.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Actions -->
+    <div>
+        <h2 class="text-lg sm:text-xl font-semibold mb-4 sm:mb-5 text-slate-300">Quick Actions</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            <a href="{% url 'inventory:product_list' %}" 
+               class="bg-slate-800 hover:bg-slate-700 p-5 sm:p-6 rounded-2xl sm:rounded-3xl text-center transition-all border border-slate-700 hover:border-teal-400">
+                <span class="block text-2xl sm:text-3xl mb-2 sm:mb-3">📦</span>
+                <span class="font-semibold text-sm sm:text-base">Manage Products</span>
+            </a>
+            
+            <a href="{% url 'inventory:batch_list' %}" 
+               class="bg-slate-800 hover:bg-slate-700 p-5 sm:p-6 rounded-2xl sm:rounded-3xl text-center transition-all border border-slate-700 hover:border-emerald-400">
+                <span class="block text-2xl sm:text-3xl mb-2 sm:mb-3">📋</span>
+                <span class="font-semibold text-sm sm:text-base">View Batches</span>
+            </a>
+            
+            <a href="{% url 'inventory:scanner' %}" 
+               class="bg-slate-800 hover:bg-slate-700 p-5 sm:p-6 rounded-2xl sm:rounded-3xl text-center transition-all border border-slate-700 hover:border-amber-400">
+                <span class="block text-2xl sm:text-3xl mb-2 sm:mb-3">📱</span>
+                <span class="font-semibold text-sm sm:text-base">Barcode Scanner</span>
+            </a>
+            
+            <a href="{% url 'alerts:notification_list' %}" 
+               class="bg-slate-800 hover:bg-slate-700 p-5 sm:p-6 rounded-2xl sm:rounded-3xl text-center transition-all border border-slate-700 hover:border-cyan-400">
+                <span class="block text-2xl sm:text-3xl mb-2 sm:mb-3">🛎️</span>
+                <span class="font-semibold text-sm sm:text-base">Notifications</span>
+            </a>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: #334155;
+        border-radius: 9999px;
+        transition: background-color 0.2s ease;
+    }
+    .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+        background-color: #64748b;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:active {
+        background-color: #94a3b8;
+    }
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #334155 transparent;
+    }
+    .custom-scrollbar:hover {
+        scrollbar-color: #64748b transparent;
+    }
+</style>
+{% endblock %}
