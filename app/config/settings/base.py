@@ -37,7 +37,7 @@ DEBUG = True
 
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['*', "expiry-erp.onrender.com"]
 
 # Application definition
 
@@ -286,7 +286,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://192.168.1.193",
     "http://192.168.8.31",
-    "http://192.168.8.1"
+    "http://192.168.8.1",
+    "https://expiry-erp.onrender.com",
+
 ]
 
 CORS_ALLOW_CREDENTIALS = True
