@@ -30,7 +30,7 @@ urlpatterns = [
     path('inventory/', include('inventory.urls', namespace='inventory')),
     path('reports/', include('reports.urls', namespace='reports')),
     path('alerts/', include('alerts.urls', namespace='alerts')),
-    path('core/', include('core.urls')),
+    path('core/', include('core.urls', namespace='users')),
 
     # Authentication
    # Root URL → redirects to login if not logged in, or dashboard if logged in

@@ -18,12 +18,12 @@ def is_superuser(user):
 def root_redirect(request):
     if request.user.is_authenticated:
         return redirect("inventory:dashboard")
-    return redirect("loading")
+    return redirect("login")
 
 
 # ===================== USER MANAGEMENT =====================
 
-@user_passes_test(is_superuser, login_url="loading")
+@user_passes_test(is_superuser, login_url="login")
 def user_list(request):
     users = (
         CustomUser.objects.all()
@@ -51,7 +51,7 @@ def user_list(request):
     )
 
 
-@user_passes_test(is_superuser, login_url="loading")
+@user_passes_test(is_superuser, login_url="login")
 def user_create(request):
     if request.method == "POST":
         form = SuperUserCreationForm(request.POST)
@@ -69,7 +69,7 @@ def user_create(request):
     return render(request, "core/user_create.html", {"form": form})
 
 
-@user_passes_test(is_superuser, login_url="loading")
+@user_passes_test(is_superuser, login_url="login")
 def user_update(request, pk):
     user_obj = get_object_or_404(CustomUser, pk=pk)
 
@@ -92,7 +92,7 @@ def user_update(request, pk):
     )
 
 
-@user_passes_test(is_superuser, login_url="loading")
+@user_passes_test(is_superuser, login_url="login")
 def user_delete(request, pk):
     user_obj = get_object_or_404(CustomUser, pk=pk)
 

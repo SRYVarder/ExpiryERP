@@ -33,11 +33,13 @@ SECRET_KEY = os.getenv('SECRET_KEY') or secrets.token_urlsafe(50)
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
-
-ALLOWED_HOSTS = ['*', "expiry-erp.onrender.com"]
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "expiry-erp.onrender.com",
+]
 
 # Application definition
 
@@ -155,7 +157,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
         'OPTIONS': {
-            'min_length': 6,  # 👈 Change this number from 8 to 6
+            'min_length': 6,  # 👈 Change this number for pasword limit
         }
     },
     {
@@ -189,11 +191,9 @@ DATE_INPUT_FORMATS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+
 
 
 # Celery + Redis (Docker)
@@ -203,6 +203,9 @@ CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Africa/Nairobi'   # Good for Kenya
+  
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -247,7 +250,7 @@ LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/loading/'          # After login → go to loading
 LOGOUT_REDIRECT_URL = '/login/'
 
-# Add this to settings.py
+# error handling
 def handler403(request, exception):
     return redirect('loading')
 
@@ -389,11 +392,24 @@ LOGGING = {
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
-CSRF_COOKIE_HTTPONLY = True
-SESSION_COOKIE_HTTPONLY = True
+
+
 
 # Production-only security (will be overridden in production.py)
+# Render HTTPS proxy configuration
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Authentication and session configuration
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
+SESSION_COOKIE_NAME = "sessionid"
+SESSION_COOKIE_AGE = 1209600  # 14 days
+
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SAMESITE = "Lax"
+
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SAMESITE = "Lax"
+
 if not DEBUG:
-    SECURE_SSL_REDIRECT = False
-    SESSION_COOKIE_SECURE = False
-    CSRF_COOKIE_SECURE = False
+    SECURE_SSL_REDIRECT = True
