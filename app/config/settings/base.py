@@ -293,6 +293,16 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://192.168.1.193",
+    "http://192.168.8.31",
+    "http://192.168.8.1",
+    "https://expiry-erp.onrender.com",
+
+]
+
 # Error Pages
 HANDLER404 = 'django.views.defaults.page_not_found'
 HANDLER500 = 'django.views.defaults.server_error'
