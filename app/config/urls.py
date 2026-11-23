@@ -25,6 +25,16 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.http import JsonResponse
 
 
+
+def auth_debug(request):
+    return JsonResponse({
+        "authenticated": request.user.is_authenticated,
+        "username": request.user.username if request.user.is_authenticated else None,
+        "session_key_exists": bool(request.session.session_key),
+        "session_cookie_received": "sessionid" in request.COOKIES,
+        "secure_request": request.is_secure(),
+    })
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('inventory/', include('inventory.urls', namespace='inventory')),
@@ -62,11 +72,3 @@ urlpatterns = [
 
 handler403 = 'config.settings.handler403'
 
-def auth_debug(request):
-    return JsonResponse({
-        "authenticated": request.user.is_authenticated,
-        "username": request.user.username if request.user.is_authenticated else None,
-        "session_key_exists": bool(request.session.session_key),
-        "session_cookie_received": "sessionid" in request.COOKIES,
-        "secure_request": request.is_secure(),
-    })
