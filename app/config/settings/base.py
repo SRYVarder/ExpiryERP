@@ -15,7 +15,7 @@ from pathlib import Path
 from datetime import timedelta
 from django.shortcuts import redirect
 from dotenv import load_dotenv
-
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 #BASE_DIR = Path(__file__).resolve().parent.parent
@@ -129,11 +129,19 @@ REST_FRAMEWORK = {
  #       'PORT': '5432',
  #   }
 #}
-# Database (using django-environ)
-import dj_database_url
+# Database (using local django-environ)
+
+#DATABASES = {
+#    'default': dj_database_url.config(
+#        default='postgres://postgres:admin@localhost:5432/ExpiryERP'
+#    )
+#}
+# database used for render
 DATABASES = {
-    'default': dj_database_url.config(
-        default='postgres://postgres:admin@localhost:5432/ExpiryERP'
+    "default": dj_database_url.config(
+        default=os.environ.get("DATABASE_URL"),
+        conn_max_age=600,
+        ssl_require=True,
     )
 }
 
