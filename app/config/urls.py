@@ -22,7 +22,7 @@ from django.contrib.auth import views as auth_views
 from inventory.views import loading_screen
 from django.shortcuts import redirect
 from django.contrib.auth.views import LoginView, LogoutView
-
+from django.http import JsonResponse
 
 
 urlpatterns = [
@@ -31,6 +31,11 @@ urlpatterns = [
     path('reports/', include('reports.urls', namespace='reports')),
     path('alerts/', include('alerts.urls', namespace='alerts')),
     path('core/', include('core.urls', namespace='users')),
+    
+    #temporarily testing auth
+    path('auth-debug/', auth_debug, name='auth_debug'),
+
+
 
     # Authentication
    # Root URL → redirects to login if not logged in, or dashboard if logged in
@@ -56,3 +61,12 @@ urlpatterns = [
 ]
 
 handler403 = 'config.settings.handler403'
+
+def auth_debug(request):
+    return JsonResponse({
+        "authenticated": request.user.is_authenticated,
+        "username": request.user.username if request.user.is_authenticated else None,
+        "session_key_exists": bool(request.session.session_key),
+        "session_cookie_received": "sessionid" in request.COOKIES,
+        "secure_request": request.is_secure(),
+    })
