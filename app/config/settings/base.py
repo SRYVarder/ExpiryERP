@@ -298,6 +298,12 @@ HANDLER404 = 'django.views.defaults.page_not_found'
 HANDLER500 = 'django.views.defaults.server_error'
 
 # ==================== LOGGING CONFIGURATION ====================
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Create the logs directory if it doesn't exist
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -317,6 +323,7 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
+
         'file': {
             'level': 'INFO',
             'class': 'logging.handlers.RotatingFileHandler',
@@ -328,7 +335,8 @@ LOGGING = {
         'error_file': {
             'level': 'ERROR',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs/error.log',
+            'filename': LOG_DIR / 'error.log',
+            #'filename': BASE_DIR / 'logs/error.log',
             'maxBytes': 1024 * 1024 * 20,  # 20MB
             'backupCount': 3,
             'formatter': 'verbose',
