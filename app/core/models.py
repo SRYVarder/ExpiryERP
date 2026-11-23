@@ -33,7 +33,7 @@ class CustomUser(AbstractUser):
 
    # Permission Helpers
     def can_manage_users(self):
-        return self.role == ['superuser', 'manager', 'staff']
+        return self.role in ['superuser']
 
     def can_manage_inventory(self):
         return self.role in ['superuser', 'manager']
