@@ -37,7 +37,7 @@ DEBUG = True
 
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*',  192.168.8.1] 
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
