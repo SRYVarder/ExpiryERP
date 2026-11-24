@@ -1,129 +1,98 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<div class="space-y-6 sm:space-y-8">
+{% block title %}Stock vs Expiry Report · REGON ExpiryERP{% endblock %}
 
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+{% block content %}
+<div class="erp-page">
+    <header class="erp-header">
         <div>
-            <h1 class="text-3xl sm:text-4xl font-bold text-white">
-                Stock vs Expiry Report
-            </h1>
-            <p class="text-slate-400 mt-1 text-sm sm:text-base">
+            <p class="erp-eyebrow">Risk exposure</p>
+            <h1 class="erp-title">Stock vs Expiry Report</h1>
+            <p class="erp-subtitle">
                 Generated on {{ today|date:"d F Y" }} • Total: {{ total_count }} products
             </p>
         </div>
 
-        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <a href="{% url 'reports:reports_dashboard' %}" 
-               class="inline-flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-5 py-2.5 rounded-2xl text-sm font-medium transition-all">
-                ← Reports Dashboard
-            </a>
-
-            <a href="?{% if search_query %}search={{ search_query }}&{% endif %}export=excel" 
-               class="bg-emerald-600 hover:bg-emerald-500 px-5 py-2.5 rounded-2xl font-medium text-sm flex items-center gap-2 transition-all">
+        <div class="erp-actions">
+            <a href="{% url 'reports:reports_dashboard' %}" class="btn-secondary">← Reports Dashboard</a>
+            <a href="?export=excel{% if search_query %}&q={{ search_query }}{% endif %}" class="btn-primary">
                 📥 Export Excel
             </a>
         </div>
-    </div>
+    </header>
 
-    <!-- Search -->
-    <form method="GET" class="flex flex-col sm:flex-row gap-3">
-        <input type="text" name="search" value="{{ search_query }}"
-               placeholder="Search by Product Name or Icode..."
-               class="bg-slate-800 border border-slate-700 rounded-2xl px-5 py-3.5 w-full focus:outline-none focus:border-teal-500 text-white">
-        
-        <button type="submit" class="bg-teal-600 hover:bg-teal-500 px-8 py-3.5 rounded-2xl font-medium whitespace-nowrap">
-            Search
-        </button>
-    </form>
+    <section class="glass-card" style="display: grid; gap: 1.15rem;">
+        <form method="get" class="erp-search-bar">
+            <input type="text"
+                   name="q"
+                   value="{{ search_query }}"
+                   class="erp-input"
+                   style="max-width: 340px;"
+                   placeholder="Search product name or Icode...">
+            <button type="submit" class="btn-secondary">Search</button>
+            {% if search_query %}
+            <a href="{% url 'reports:stock_vs_expiry_report' %}" class="btn-secondary">Clear</a>
+            {% endif %}
+        </form>
 
-    <!-- Table -->
-    <div class="bg-slate-800 rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-700">
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[600px]">
-                <thead class="bg-slate-700/80">
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
                     <tr>
-                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium text-teal-300">Product</th>
-                        <th class="px-4 sm:px-6 py-4 text-right text-sm font-medium">Current Stock (SoH)</th>
-                        <th class="px-4 sm:px-6 py-4 text-center text-sm font-medium">Batches Expiring Soon (30 days)</th>
+                        <th>Product</th>
+                        <th class="align-right">Current Stock (SoH)</th>
+                        <th class="align-right">Batches Expiring Soon (30 days)</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-700">
+                <tbody>
                     {% for item in report_data %}
-                    <tr class="hover:bg-slate-700/40 transition-colors">
-                        <td class="px-4 sm:px-6 py-4">
-                            <span class="font-mono text-teal-300 text-sm">{{ item.product.icode }}</span>
-                            <div class="text-sm text-white">{{ item.product.name }}</div>
+                    <tr>
+                        <td>
+                            <div class="mono-code">{{ item.product.icode }}</div>
+                            <div class="cell-strong">{{ item.product.name }}</div>
                         </td>
-                        <td class="px-4 sm:px-6 py-4 text-right font-semibold text-emerald-400">
-                            {{ item.soh }}
-                        </td>
-                        <td class="px-4 sm:px-6 py-4 text-center">
+                        <td class="align-right cell-strong">{{ item.soh }}</td>
+                        <td class="align-right">
                             {% if item.expiring_soon > 0 %}
-                                <span class="bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full text-xs font-medium">
-                                    {{ item.expiring_soon }}
-                                </span>
+                                <span class="badge badge-warning">{{ item.expiring_soon }}</span>
                             {% else %}
-                                <span class="text-slate-500 text-sm">0</span>
+                                <span class="badge badge-neutral">0</span>
                             {% endif %}
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="3" class="px-6 py-16 text-center text-slate-400">
-                            No products found.
-                        </td>
+                        <td colspan="3" style="text-align: center; padding: 2.5rem 1rem;">No products found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-    </div>
 
-    <!-- Pagination -->
-    {% if page_obj.has_other_pages %}
-    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
-        <p class="text-slate-400 text-sm">
-            Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-        </p>
-
-        <div class="flex items-center gap-2">
-            {% if page_obj.has_previous %}
-                <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}"
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    First
-                </a>
-                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    Previous
-                </a>
-            {% endif %}
-
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <span class="px-3.5 py-2 rounded-xl bg-teal-600 text-sm font-medium">{{ num }}</span>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                    <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}"
-                       class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                        {{ num }}
-                    </a>
+        {% if page_obj.has_other_pages %}
+        <nav class="erp-pagination" aria-label="Pagination">
+            <span>Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            <div class="erp-page-links">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1{% if search_query %}&q={{ search_query }}{% endif %}" class="btn-secondary btn-sm">First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn-secondary btn-sm">Previous</a>
                 {% endif %}
-            {% endfor %}
 
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    Next
-                </a>
-                <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}"
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    Last
-                </a>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <span class="btn-primary btn-sm">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <a href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn-secondary btn-sm">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
 
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn-secondary btn-sm">Next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn-secondary btn-sm">Last</a>
+                {% endif %}
+            </div>
+        </nav>
+        {% endif %}
+    </section>
 </div>
 {% endblock %}

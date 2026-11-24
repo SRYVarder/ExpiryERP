@@ -1,75 +1,56 @@
 {% extends 'base.html' %}
 
+{% block title %}Bulk Batch Upload · REGON ExpiryERP{% endblock %}
+
 {% block content %}
-<div class="max-w-4xl mx-auto space-y-6 sm:space-y-8">
-
-    <!-- Header Block -->
-    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+<div class="erp-page">
+    <header class="erp-header" style="max-width: 720px; width: 100%; margin-inline: auto;">
         <div>
-            <h1 class="text-3xl sm:text-4xl font-bold text-white">Bulk Batch Upload</h1>
-            <p class="text-slate-400 text-sm mt-1">Upload inventory records instantly via data spreadsheet imports.</p>
+            <p class="erp-eyebrow">Spreadsheet import</p>
+            <h1 class="erp-title">Bulk Batch Upload</h1>
+            <p class="erp-subtitle">Upload inventory records instantly via data spreadsheet imports.</p>
         </div>
-        <div>
-            <a href="{% url 'inventory:batch_list' %}" 
-               class="text-black-400 hover:text-teal-300 font-medium text-sm flex items-center gap-1.5 transition-colors group">
-                <span class="transform group-hover:-translate-x-1 transition-transform">←</span> Back to Batches
-            </a>
-        </div>
-    </div>
+        <a href="{% url 'inventory:batch_list' %}" class="btn-secondary">← Back to Batches</a>
+    </header>
 
-    <!-- Instructions Banner Component -->
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6">
-        <h3 class="font-bold text-white mb-3 text-base flex items-center gap-2">
-            <span>ℹ️</span> Instructions & Requirements
-        </h3>
-        <ul class="space-y-2 text-slate-400 text-sm">
-            <li class="flex items-start gap-2.5">
-                <span class="text-teal-500 font-bold mt-0.5">•</span>
-                <span>Download the official sample template file before formatting your data rows.</span>
-            </li>
-            <li class="flex items-start gap-2.5">
-                <span class="text-teal-500 font-bold mt-0.5">•</span>
-                <span>The spreadsheet <strong>must contain the exact header signature columns</strong> in the first row:</span>
-            </li>
-        </ul>
-        
-        <!-- Code-styled Visual Header Guide -->
-        <div class="mt-3 p-3 bg-slate-950 rounded-xl font-mono text-xs text-emerald-400 overflow-x-auto border border-slate-800/60 shadow-inner whitespace-nowrap">
-            product_icode, batch_number, manufacturing_date, sell_by_date, salvage_date, expiry_date, current_quantity, supplier_batch_ref
+    <article class="glass-card" style="max-width: 720px; width: 100%; margin-inline: auto; display: grid; gap: 1.35rem;">
+        <div style="padding: 1rem 1.15rem; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 14px; background: var(--surface-soft);">
+            <h3 style="margin: 0 0 0.5rem; font-size: 0.88rem; font-weight: 750; color: var(--text);">
+                ℹ Instructions & Requirements
+            </h3>
+            <ul style="margin: 0; padding-left: 1.1rem; color: var(--muted); font-size: 0.8rem; line-height: 1.6;">
+                <li>Download the official sample template file before formatting your data rows.</li>
+                <li>The spreadsheet <strong class="cell-strong">must contain the exact header signature columns</strong> in the first row:</li>
+            </ul>
+            <div class="mono-code" style="margin-top: 0.75rem; padding: 0.65rem 0.8rem; border-radius: 10px; background: var(--surface-strong); border: 1px solid var(--line); overflow-x: auto; white-space: nowrap;">
+                product_icode, batch_number, manufacturing_date, sell_by_date, salvage_date, expiry_date, current_quantity, supplier_batch_ref
+            </div>
         </div>
-    </div> 
 
-    <!-- Core Upload Form Container -->
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8">
-        <form method="post" enctype="multipart/form-data" class="space-y-6">
+        <form method="post" enctype="multipart/form-data" class="erp-form-grid">
             {% csrf_token %}
-            
-            <!-- Standard Django File Field Styling Protection Hook -->
-            <div class="flex flex-col">
-                <div class="django-field-wrapper [&_p]:text-slate-300 [&_p]:text-sm [&_p]:font-medium [&_p_label]:block [&_p_label]:mb-2 [&_p_input]:w-full [&_p_input]:bg-slate-800 [&_p_input]:border [&_p_input]:border-slate-700 [&_p_input]:text-white [&_p_input]:rounded-2xl [&_p_input]:px-5 [&_p_input]:py-3.5 [&_p_input]:focus:outline-none [&_p_input]:focus:border-teal-500 [&_p_input]:transition-colors">
-                    {{ form.as_p }}
-                </div>
-                
-                {% if form.errors %}
-                <div class="bg-rose-950/40 border border-rose-800/60 text-rose-300 p-4 rounded-2xl mt-4 text-sm font-medium">
-                    {{ form.non_field_errors.as_text|default:"There was an error parsing the selected upload file. Please check your data fields and try again." }}
-                </div>
+
+            {% for field in form %}
+            <div class="erp-field">
+                {{ field.label_tag }}
+                {{ field }}
+                {% if field.help_text %}
+                <p class="erp-help">{{ field.help_text }}</p>
                 {% endif %}
             </div>
-            
-            <!-- Action Navigation Controls -->
-            <div class="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-800">
-                <a href="{% url 'inventory:batch_create' %}" 
-                   class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-6 py-3.5 rounded-2xl font-medium text-center text-sm sm:text-base w-full sm:w-auto order-2 sm:order-1 transition-colors">
-                    Create Single Batch
-                </a>
-                <button type="submit" 
-                        class="bg-teal-600 hover:bg-teal-500 text-white px-8 py-3.5 rounded-2xl font-semibold text-center text-sm sm:text-base w-full sm:w-auto order-1 sm:order-2 transition-colors shadow-lg shadow-teal-600/10">
-                    Upload Excel File
-                </button>
+            {% endfor %}
+
+            {% if form.errors %}
+            <div class="erp-alert-box">
+                {{ form.non_field_errors.as_text|default:"There was an error parsing the selected upload file. Please check your data fields and try again." }}
+            </div>
+            {% endif %}
+
+            <div class="erp-actions" style="margin-top: 0.35rem;">
+                <button type="submit" class="btn-primary">Upload Excel File</button>
+                <a href="{% url 'inventory:batch_create' %}" class="btn-secondary">Create Single Batch</a>
             </div>
         </form>
-    </div>
-
+    </article>
 </div>
 {% endblock %}

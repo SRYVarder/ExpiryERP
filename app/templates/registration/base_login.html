@@ -1,18 +1,172 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expiry ERP - Login</title>
+    <title>{% block title %}Expiry ERP - Login{% endblock %}</title>
+
+    <script>
+        try {
+            document.documentElement.dataset.theme =
+                localStorage.getItem('theme') || 'light';
+        } catch (error) {
+            document.documentElement.dataset.theme = 'light';
+        }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
+
     <style>
+        :root {
+            color-scheme: light;
+            --login-bg: #f1f4f8;
+            --login-text: #202b3b;
+            --login-muted: #687589;
+            --login-surface: rgba(250, 251, 253, 0.9);
+            --login-border: rgba(148, 163, 184, 0.22);
+            --login-shadow: 0 18px 48px rgba(31, 45, 66, 0.1);
+            --login-accent: #0d8278;
+        }
+
+        [data-theme="dark"] {
+            color-scheme: dark;
+            --login-bg: #101722;
+            --login-text: #e4eaf2;
+            --login-muted: #a0adbd;
+            --login-surface: rgba(27, 37, 52, 0.9);
+            --login-border: rgba(203, 218, 240, 0.12);
+            --login-shadow: 0 18px 48px rgba(0, 0, 0, 0.25);
+            --login-accent: #66d6c6;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            min-height: 100%;
+            background: var(--login-bg);
+        }
+
         body {
-            background: linear-gradient(135deg, #afedf8, #24e212);
             min-height: 100vh;
+            margin: 0;
+            display: grid;
+            place-items: center;
+            padding: 2rem 1rem;
+            color: var(--login-text);
+            background:
+                radial-gradient(ellipse at 12% 8%, rgba(45, 212, 191, 0.08), transparent 36%),
+                radial-gradient(ellipse at 88% 14%, rgba(99, 102, 241, 0.06), transparent 34%),
+                var(--login-bg);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+                         BlinkMacSystemFont, "Segoe UI", sans-serif;
+            transition: background-color 180ms ease, color 180ms ease;
+        }
+
+        .login-stage {
+            width: min(100%, 1100px);
+        }
+
+        /* Optional class for the login form/card in your child template. */
+        .login-glass {
+            border: 1px solid var(--login-border);
+            border-radius: 22px;
+            color: var(--login-text);
+            background: var(--login-surface);
+            box-shadow: var(--login-shadow);
+            backdrop-filter: blur(18px) saturate(135%);
+            -webkit-backdrop-filter: blur(18px) saturate(135%);
+        }
+
+        .login-theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 10;
+            min-height: 42px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 0.8rem;
+            border: 1px solid var(--login-border);
+            border-radius: 12px;
+            color: var(--login-text);
+            background: var(--login-surface);
+            box-shadow: 0 5px 18px rgba(31, 45, 66, 0.06);
+            cursor: pointer;
+            font: inherit;
+            font-size: 0.8rem;
+            font-weight: 650;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+
+        .login-theme-toggle:hover {
+            border-color: var(--login-accent);
+        }
+
+        .login-theme-icon {
+            color: var(--login-accent);
+            font-size: 1.05rem;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 1.25rem 0.85rem;
+            }
+
+            .login-theme-toggle {
+                top: 0.75rem;
+                right: 0.75rem;
+            }
         }
     </style>
 </head>
-<body class="text-white">
-    {% block content %}{% endblock %}
+
+<body>
+    <button type="button"
+            class="login-theme-toggle"
+            id="loginThemeToggle"
+            aria-label="Toggle color theme">
+        <span class="login-theme-icon" id="loginThemeIcon" aria-hidden="true">☾</span>
+        <span id="loginThemeLabel">Dark mode</span>
+    </button>
+
+    <main class="login-stage">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        (function () {
+            const root = document.documentElement;
+            const button = document.getElementById('loginThemeToggle');
+            const icon = document.getElementById('loginThemeIcon');
+            const label = document.getElementById('loginThemeLabel');
+
+            function updateThemeButton() {
+                const isDark = root.dataset.theme === 'dark';
+                icon.textContent = isDark ? '☀' : '☾';
+                label.textContent = isDark ? 'Light mode' : 'Dark mode';
+            }
+
+            updateThemeButton();
+
+            button.addEventListener('click', function () {
+                const nextTheme =
+                    root.dataset.theme === 'dark' ? 'light' : 'dark';
+
+                root.dataset.theme = nextTheme;
+
+                try {
+                    localStorage.setItem('theme', nextTheme);
+                } catch (error) {
+                    // Theme still works for the current page if storage is unavailable.
+                }
+
+                updateThemeButton();
+            });
+        })();
+    </script>
 </body>
 </html>

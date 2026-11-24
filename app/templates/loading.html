@@ -1,47 +1,90 @@
 {% extends 'base.html' %}
 
+{% block title %}Signing In · REGON ExpiryERP{% endblock %}
+
 {% block content %}
-<div class="max-w-4xl mx-auto flex flex-col items-center justify-center py-12 sm:py-16 text-center">
-    <div class="max-w-md w-full">
-        
-        <!-- Loading Animation Block -->
-        <div id="loading" class="space-y-6">
-            <div class="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto shadow-sm"></div>
-            <div class="space-y-2">
-                <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Loading...</h2>
-                <p class="text-slate-400 text-sm sm:text-base leading-relaxed" id="loading-text">Preparing your dashboard panel infrastructure.</p>
-            </div>
+{% url 'inventory:dashboard' as default_dashboard_url %}
+{% if redirect_url %}
+    {% url redirect_url as reversed_redirect_url %}
+{% endif %}
+{% with destination=reversed_redirect_url|default:redirect_url|default:default_dashboard_url %}
+
+<noscript>
+    <meta http-equiv="refresh" content="1;url={{ destination }}">
+</noscript>
+
+<div id="auth-redirect-stage"
+     data-target-url="{{ destination }}"
+     style="min-height: calc(100vh - 180px); display: grid; place-items: center; padding: 1rem 0;">
+    <article class="glass-card erp-confirm-card" style="max-width: 460px; margin: 0; padding: 2.35rem 2rem;">
+        <!-- State 1: Loading -->
+        <div id="auth-loading-view">
+            <div class="erp-spinner" aria-hidden="true"></div>
+            <p class="erp-eyebrow" style="margin-top: 1.15rem;">Initializing session</p>
+            <h2 class="erp-title" style="font-size: 1.5rem;">Loading...</h2>
+            <p class="erp-subtitle" style="margin-top: 0.6rem;">
+                {{ message|default:"Preparing your dashboard panel infrastructure." }}
+            </p>
         </div>
 
-        <!-- Success / Redirect Message Block -->
-        <div id="success" class="hidden space-y-6">
-            <div class="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/5 animate-bounce">
-                <span class="text-2xl">✅</span>
+        <!-- State 2: Authenticated Confirmation -->
+        <div id="auth-ready-view" hidden>
+            <div style="width: 56px; height: 56px; margin: 0 auto 1rem; display: grid; place-items: center; border-radius: 18px; background: rgba(16, 185, 129, 0.14); border: 1px solid rgba(16, 185, 129, 0.28); font-size: 1.65rem;"
+                 aria-hidden="true">
+                ✅
             </div>
-            <div class="space-y-2">
-                <h2 class="text-2xl sm:text-3xl font-bold text-emerald-400 tracking-tight">Welcome back!</h2>
-                <p class="text-slate-300 text-sm sm:text-base leading-relaxed">Synchronized secure authentication tokens. Redirecting to your inventory system...</p>
+            <p class="erp-eyebrow">Session verified</p>
+            <h2 class="erp-title" style="font-size: 1.5rem;">Welcome back!</h2>
+            <p class="erp-subtitle" style="margin-top: 0.6rem; line-height: 1.55;">
+                Synchronized secure authentication tokens. Redirecting to your inventory system...
+            </p>
+
+            <div style="margin-top: 1.35rem;">
+                <a id="auth-fallback-link" href="{{ destination }}" class="btn-secondary btn-sm">
+                    Continue to Dashboard →
+                </a>
             </div>
         </div>
-
-    </div>
+    </article>
 </div>
 
+<style>
+    .erp-spinner {
+        width: 44px;
+        height: 44px;
+        margin: 0 auto;
+        border: 3px solid var(--line);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: erp-spin 0.8s linear infinite;
+    }
+
+    @keyframes erp-spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+
 <script>
-    // Managed sequence handlers to toggle layout view states automatically
-    setTimeout(() => {
-        const loadingBlock = document.getElementById('loading');
-        const successBlock = document.getElementById('success');
-        
-        if (loadingBlock && successBlock) {
-            loadingBlock.classList.add('hidden');
-            successBlock.classList.remove('hidden');
-        }
-        
-        // Execute frame redirection link loops
-        setTimeout(() => {
-            window.location.href = "{% url 'inventory:dashboard' %}";
-        }, 1500);
-    }, 1800);
+    (function () {
+        const stage = document.getElementById('auth-redirect-stage');
+        const loadingView = document.getElementById('auth-loading-view');
+        const readyView = document.getElementById('auth-ready-view');
+        const rawTarget = stage ? stage.dataset.targetUrl : '';
+
+        const targetUrl = (rawTarget && rawTarget.startsWith('/') && !rawTarget.startsWith('//'))
+            ? rawTarget
+            : "{{ default_dashboard_url }}";
+
+        setTimeout(function () {
+            if (loadingView) loadingView.hidden = true;
+            if (readyView) readyView.hidden = false;
+        }, 500);
+
+        setTimeout(function () {
+            window.location.replace(targetUrl);
+        }, 1200);
+    })();
 </script>
+{% endwith %}
 {% endblock %}
+

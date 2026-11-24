@@ -1,22 +1,45 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ title|default:"Manage Product" }} · REGON ExpiryERP{% endblock %}
+
 {% block content %}
-<div class="max-w-2xl mx-auto p-6">
-    <h1 class="text-3xl font-bold text-teal-400 mb-8">{{ title }}</h1>
-    
-    <form method="post" class="bg-slate-800 p-8 rounded-3xl">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <div class="mt-8 flex gap-4">
-            <button type="submit" 
-                    class="bg-teal-600 hover:bg-teal-500 px-8 py-4 rounded-2xl font-semibold">
-                Save Product
-            </button>
-            <a href="{% url 'inventory:product_list' %}" 
-               class="bg-slate-700 hover:bg-slate-600 px-8 py-4 rounded-2xl">
-                Cancel
-            </a>
+<div class="erp-page">
+    <header class="erp-header" style="max-width: 680px; width: 100%; margin-inline: auto;">
+        <div>
+            <p class="erp-eyebrow">Master product catalog</p>
+            <h1 class="erp-title">{{ title|default:"Manage Product" }}</h1>
         </div>
-    </form>
+        <a href="{% url 'inventory:product_list' %}" class="btn-secondary">← Back to Products</a>
+    </header>
+
+    <article class="glass-card erp-form-card">
+        <form method="post" class="erp-form-grid">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="erp-alert-box">{{ form.non_field_errors.as_text }}</div>
+            {% endif %}
+
+            {% for field in form %}
+            <div class="erp-field">
+                <label for="{{ field.id_for_label }}">
+                    {{ field.label }} {% if field.field.required %}*{% endif %}
+                </label>
+                {{ field }}
+                {% if field.help_text %}
+                <p class="erp-help">{{ field.help_text }}</p>
+                {% endif %}
+                {% for error in field.errors %}
+                <p class="erp-error">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+            <div class="erp-actions" style="margin-top: 0.5rem;">
+                <button type="submit" class="btn-primary">Save Product</button>
+                <a href="{% url 'inventory:product_list' %}" class="btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </article>
 </div>
 {% endblock %}

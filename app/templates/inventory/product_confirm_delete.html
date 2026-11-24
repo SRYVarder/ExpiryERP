@@ -1,19 +1,21 @@
 {% extends 'base.html' %}
 
+{% block title %}Delete Product · REGON ExpiryERP{% endblock %}
+
 {% block content %}
-<div class="max-w-md mx-auto p-6 text-center">
-    <h2 class="text-2xl text-red-400 mb-6">Delete Product?</h2>
-    <p class="mb-8">Are you sure you want to delete <strong>{{ product.name }} ({{ product.icode }})</strong>?</p>
-    
-    <form method="post">
+<div class="glass-card erp-confirm-card">
+    <p class="erp-eyebrow">Master catalog</p>
+    <h2 class="erp-title" style="font-size: 1.5rem;">Delete Product?</h2>
+    <p class="erp-subtitle" style="margin-top: 0.75rem;">
+        Are you sure you want to delete
+        <strong class="cell-strong">{{ product.name }} ({{ product.icode }})</strong>?
+    </p>
+    <p class="erp-error" style="margin-top: 0.65rem;">This action cannot be undone.</p>
+
+    <form method="post" class="erp-actions" style="justify-content: center; margin-top: 1.5rem;">
         {% csrf_token %}
-        <button type="submit" class="bg-red-600 hover:bg-red-500 px-8 py-4 rounded-2xl">
-            Yes, Delete
-        </button>
-        <a href="{% url 'inventory:product_list' %}" 
-           class="ml-4 text-slate-400 hover:text-white">
-            Cancel
-        </a>
+        <button type="submit" class="btn-danger">Yes, Delete</button>
+        <a href="{% url 'inventory:product_list' %}" class="btn-secondary">Cancel</a>
     </form>
 </div>
 {% endblock %}

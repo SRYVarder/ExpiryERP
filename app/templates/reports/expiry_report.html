@@ -1,95 +1,86 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<div class="space-y-6 sm:space-y-8">
+{% block title %}{{ title|default:"Expiry Report" }} · REGON ExpiryERP{% endblock %}
 
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+{% block content %}
+<div class="erp-page">
+    <header class="erp-header">
         <div>
-            <h1 class="text-3xl sm:text-4xl font-bold text-white">
-                {{ title|default:"Expiry Report" }}
-            </h1>
-            <p class="text-slate-400 mt-1 text-sm sm:text-base">
+            <p class="erp-eyebrow">Analytics & exports</p>
+            <h1 class="erp-title">{{ title|default:"Expiry Report" }}</h1>
+            <p class="erp-subtitle">
                 Generated on {{ today|date:"d F Y" }} • Total: {{ total_count }} batches
             </p>
         </div>
 
-        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <!-- Time Range Selector -->
-            <form method="GET" class="flex items-center gap-2">
-                {% if search_query %}
-                    <input type="hidden" name="search" value="{{ search_query }}">
-                {% endif %}
-                <span class="text-slate-400 text-sm font-medium hidden sm:inline">Show next:</span>
-                <select name="days" onchange="this.form.submit()" 
-                        class="bg-slate-800 border border-slate-700 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500 text-white">
-                    {% for days, label in time_ranges.items %}
-                    <option value="{{ days }}" {% if days == selected_days %}selected{% endif %}>
-                        {{ label }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </form>
-
-
-            <!-- return to dahsboard -->
-            <a href="{% url 'reports:reports_dashboard' %}" 
-               class="inline-flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2.5 rounded-2xl text-sm font-medium transition-all">
-                ← Reports Dashboard
-            </a>
-
-            <!-- Export Button -->
-            <a href="?days={{ selected_days }}{% if search_query %}&search={{ search_query }}{% endif %}&export=excel" 
-               class="bg-emerald-600 hover:bg-emerald-500 px-5 py-2.5 rounded-2xl font-medium text-sm flex items-center gap-2 transition-all">
+        <div class="erp-actions">
+            <a href="{% url 'reports:reports_dashboard' %}" class="btn-secondary">← Reports Dashboard</a>
+            <a href="?export=excel{% if selected_days %}&days={{ selected_days }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+               class="btn-primary">
                 📥 Export Excel
             </a>
         </div>
-    </div>
+    </header>
 
-    <!-- Search -->
-    <form method="GET" class="flex flex-col sm:flex-row gap-3">
-        <input type="hidden" name="days" value="{{ selected_days }}">
-        <input type="text" name="search" value="{{ search_query }}"
-               placeholder="Search by Product Name, Icode or Batch Number..."
-               class="bg-slate-800 border border-slate-700 rounded-2xl px-5 py-3.5 w-full focus:outline-none focus:border-teal-500 text-white">
-        
-        <button type="submit" class="bg-teal-600 hover:bg-teal-500 px-8 py-3.5 rounded-2xl font-medium whitespace-nowrap">
-            Search
-        </button>
-    </form>
+    <section class="glass-card" style="display: grid; gap: 1.15rem;">
+        <!-- Time Range Filter & Search -->
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted); margin-right: 0.25rem;">
+                    Show next:
+                </span>
+                {% for days, label in time_ranges.items %}
+                <a href="?days={{ days }}{% if search_query %}&q={{ search_query }}{% endif %}"
+                   class="{% if selected_days|stringformat:'s' == days|stringformat:'s' %}btn-primary btn-sm{% else %}btn-secondary btn-sm{% endif %}">
+                    {{ label }}
+                </a>
+                {% endfor %}
+            </div>
 
-    <!-- Table -->
-    <div class="bg-slate-800 rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-700">
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[700px]">
-                <thead class="bg-slate-700/80">
+            <form method="get" class="erp-search-bar">
+                {% if selected_days %}
+                <input type="hidden" name="days" value="{{ selected_days }}">
+                {% endif %}
+                <input type="text"
+                       name="q"
+                       value="{{ search_query }}"
+                       class="erp-input"
+                       style="max-width: 280px;"
+                       placeholder="Search product or batch...">
+                <button type="submit" class="btn-secondary">Search</button>
+            </form>
+        </div>
+
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
                     <tr>
-                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium text-teal-300">Product</th>
-                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium">Batch Number</th>
-                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium">Expiry Date</th>
-                        <th class="px-4 sm:px-6 py-4 text-right text-sm font-medium">Quantity</th>
-                        <th class="px-4 sm:px-6 py-4 text-center text-sm font-medium">Days Left</th>
+                        <th>Product</th>
+                        <th>Batch Number</th>
+                        <th>Expiry Date</th>
+                        <th class="align-right">Quantity</th>
+                        <th class="align-right">Days Left</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-700">
+                <tbody>
                     {% for batch in batches %}
-                    <tr class="hover:bg-slate-700/40 transition-colors">
-                        <td class="px-4 sm:px-6 py-4">
-                            <span class="font-mono text-teal-300 text-sm">{{ batch.product.icode }}</span>
-                            <div class="text-sm text-white">{{ batch.product.name }}</div>
+                    <tr>
+                        <td>
+                            <div class="mono-code">{{ batch.product.icode }}</div>
+                            <div class="cell-strong">{{ batch.product.name }}</div>
                         </td>
-                        <td class="px-4 sm:px-6 py-4 font-mono text-sm">{{ batch.batch_number }}</td>
-                        <td class="px-4 sm:px-6 py-4 text-slate-300 text-sm">{{ batch.expiry_date }}</td>
-                        <td class="px-4 sm:px-6 py-4 text-right font-semibold">{{ batch.current_quantity }}</td>
-                        <td class="px-4 sm:px-6 py-4 text-center">
-                            <span class="text-amber-400 font-medium text-sm">
+                        <td class="mono-code">{{ batch.batch_number }}</td>
+                        <td>{{ batch.expiry_date }}</td>
+                        <td class="align-right cell-strong">{{ batch.current_quantity }}</td>
+                        <td class="align-right">
+                            <span class="badge {% if batch.days_to_expiry <= 7 %}badge-danger{% elif batch.days_to_expiry <= 30 %}badge-warning{% else %}badge-success{% endif %}">
                                 {{ batch.days_to_expiry|default:"—" }} days
                             </span>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="px-6 py-16 text-center text-slate-400">
+                        <td colspan="5" style="text-align: center; padding: 2.5rem 1rem;">
                             No batches expiring in the selected period.
                         </td>
                     </tr>
@@ -97,51 +88,31 @@
                 </tbody>
             </table>
         </div>
-    </div>
 
-    <!-- Pagination -->
-    {% if page_obj.has_other_pages %}
-    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
-        <p class="text-slate-400 text-sm">
-            Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-        </p>
-
-        <div class="flex items-center gap-2">
-            {% if page_obj.has_previous %}
-                <a href="?page=1&days={{ selected_days }}{% if search_query %}&search={{ search_query }}{% endif %}"
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    First
-                </a>
-                <a href="?page={{ page_obj.previous_page_number }}&days={{ selected_days }}{% if search_query %}&search={{ search_query }}{% endif %}"
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    Previous
-                </a>
-            {% endif %}
-
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <span class="px-3.5 py-2 rounded-xl bg-teal-600 text-sm font-medium">{{ num }}</span>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                    <a href="?page={{ num }}&days={{ selected_days }}{% if search_query %}&search={{ search_query }}{% endif %}"
-                       class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                        {{ num }}
-                    </a>
+        {% if page_obj.has_other_pages %}
+        <nav class="erp-pagination" aria-label="Pagination">
+            <span>Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            <div class="erp-page-links">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1{% if selected_days %}&days={{ selected_days }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn-secondary btn-sm">First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if selected_days %}&days={{ selected_days }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn-secondary btn-sm">Previous</a>
                 {% endif %}
-            {% endfor %}
 
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}&days={{ selected_days }}{% if search_query %}&search={{ search_query }}{% endif %}"
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    Next
-                </a>
-                <a href="?page={{ page_obj.paginator.num_pages }}&days={{ selected_days }}{% if search_query %}&search={{ search_query }}{% endif %}"
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    Last
-                </a>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <span class="btn-primary btn-sm">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <a href="?page={{ num }}{% if selected_days %}&days={{ selected_days }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn-secondary btn-sm">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
 
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if selected_days %}&days={{ selected_days }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn-secondary btn-sm">Next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if selected_days %}&days={{ selected_days }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn-secondary btn-sm">Last</a>
+                {% endif %}
+            </div>
+        </nav>
+        {% endif %}
+    </section>
 </div>
 {% endblock %}

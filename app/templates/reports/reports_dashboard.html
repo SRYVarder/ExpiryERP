@@ -1,21 +1,49 @@
 {% extends 'base.html' %}
 
+{% block title %}Reports Center · REGON ExpiryERP{% endblock %}
+
 {% block content %}
-<div class="max-w-7xl mx-auto">
-    <h1 class="text-4xl font-bold text-teal-400 mb-8">Reports Center</h1>
+<div class="erp-page">
+    <header class="erp-header">
+        <div>
+            <p class="erp-eyebrow">Business intelligence</p>
+            <h1 class="erp-title">Reports Center</h1>
+            <p class="erp-subtitle">Generate real-time inventory health and FEFO expiry exports.</p>
+        </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <a href="{% url 'reports:expiry_report' %}" 
-           class="bg-slate-800 hover:bg-slate-700 p-8 rounded-3xl border border-amber-500 transition-all">
-            <h3 class="text-2xl font-semibold text-amber-400 mb-3">Expiry Report</h3>
-            <p class="text-slate-400">View and export batches expiring soon</p>
+        <div class="erp-actions">
+            <a href="{% url 'inventory:dashboard' %}" class="btn-secondary">← Dashboard</a>
+        </div>
+    </header>
+
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem;">
+        <a href="{% url 'reports:expiry_report' %}"
+           class="glass-card"
+           style="display: flex; align-items: flex-start; gap: 1rem; text-decoration: none; transition: transform 170ms ease, border-color 170ms ease;">
+            <span style="width: 48px; height: 48px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 15px; background: rgba(245, 158, 11, 0.13); font-size: 1.4rem;">
+                ⏰
+            </span>
+            <div style="flex: 1;">
+                <p class="erp-eyebrow" style="margin-bottom: 0.25rem;">FEFO Schedule</p>
+                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 760; color: var(--text);">Expiry Report</h3>
+                <p class="erp-subtitle" style="margin-top: 0.35rem;">View and export batches expiring soon</p>
+            </div>
+            <span style="color: var(--muted); font-size: 1.15rem;">↗</span>
         </a>
 
-        <a href="{% url 'reports:stock_expiry_report' %}" 
-           class="bg-slate-800 hover:bg-slate-700 p-8 rounded-3xl border border-emerald-500 transition-all">
-            <h3 class="text-2xl font-semibold text-emerald-400 mb-3">Stock vs Expiry Report</h3>
-            <p class="text-slate-400">Compare current stock with upcoming expiries</p>
+        <a href="{% url 'reports:stock_vs_expiry_report' %}"
+           class="glass-card"
+           style="display: flex; align-items: flex-start; gap: 1rem; text-decoration: none; transition: transform 170ms ease, border-color 170ms ease;">
+            <span style="width: 48px; height: 48px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 15px; background: var(--accent-soft); font-size: 1.4rem;">
+                📊
+            </span>
+            <div style="flex: 1;">
+                <p class="erp-eyebrow" style="margin-bottom: 0.25rem;">Risk Exposure</p>
+                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 760; color: var(--text);">Stock vs Expiry Report</h3>
+                <p class="erp-subtitle" style="margin-top: 0.35rem;">Compare current stock with upcoming expiries</p>
+            </div>
+            <span style="color: var(--muted); font-size: 1.15rem;">↗</span>
         </a>
-    </div>
+    </section>
 </div>
 {% endblock %}

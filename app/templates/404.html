@@ -1,33 +1,27 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<div class="max-w-4xl mx-auto flex flex-col items-center justify-center py-12 sm:py-16 space-y-6 text-center">
-    
-    <!-- Large Styled Error Accent Badge -->
-    <div class="select-none font-black text-7xl sm:text-8xl tracking-widest bg-clip-text text-transparent bg-gradient-to-tr from-slate-600 via-slate-400 to-slate-500 animate-pulse drop-shadow-sm">
-        404
-    </div>
+{% block title %}404 · Page Not Found · REGON ExpiryERP{% endblock %}
 
-    <!-- Error Text Messaging Block -->
-    <div class="space-y-2">
-        <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Page Not Found</h2>
-        <p class="text-slate-400 text-sm sm:text-base max-w-md mx-auto leading-relaxed">
+{% block content %}
+<div style="min-height: calc(100vh - 180px); display: grid; place-items: center; padding: 1rem 0;">
+    <article class="glass-card erp-confirm-card" style="max-width: 520px; margin: 0; padding: 2.25rem 2rem;">
+        <p class="erp-eyebrow">Error 404</p>
+        <div style="font-size: clamp(3.25rem, 8vw, 4.5rem); font-weight: 850; letter-spacing: -0.06em; line-height: 1; color: var(--accent); margin: 0.25rem 0 0.75rem;">
+            404
+        </div>
+        <h2 class="erp-title" style="font-size: 1.55rem;">Page Not Found</h2>
+        <p class="erp-subtitle" style="margin-top: 0.75rem; line-height: 1.6;">
             The page you are looking for doesn't exist, has been moved, or is temporarily unavailable within the master stock catalog index.
         </p>
-    </div>
 
-    <!-- Navigational Back Button Control Block -->
-    <div class="pt-4 flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-        <button type="button" 
-                onclick="window.history.back()" 
-                class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-8 py-3.5 rounded-2xl font-semibold text-center text-sm sm:text-base w-full sm:w-auto transition-colors">
-            ← Go Back
-        </button>
-        <a href="{% url 'inventory:dashboard' %}" 
-           class="bg-teal-600 hover:bg-teal-500 text-white px-8 py-3.5 rounded-2xl font-semibold text-center text-sm sm:text-base w-full sm:w-auto transition-colors shadow-lg shadow-teal-600/10">
-            Return to Dashboard
-        </a>
-    </div>
-
+        <div class="erp-actions" style="justify-content: center; margin-top: 1.75rem;">
+            <button type="button" onclick="window.history.back()" class="btn-secondary">
+                ← Go Back
+            </button>
+            <a href="{% url 'inventory:dashboard' %}" class="btn-primary">
+                Return to Dashboard
+            </a>
+        </div>
+    </article>
 </div>
 {% endblock %}

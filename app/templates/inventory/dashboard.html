@@ -1,284 +1,821 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<div class="space-y-6 sm:space-y-8">
+{% block title %}Dashboard · REGON ExpiryERP{% endblock %}
 
-    <!-- Welcome Header + Manual Check Button -->
-    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+{% block content %}
+<div class="dashboard">
+    <!-- Welcome header -->
+    <header class="dashboard-header">
         <div>
-            <h1 class="text-3xl sm:text-4xl font-bold text-white">
-                Good morning, {{ user.username|title }} 👋
-            </h1>
-            <p class="text-slate-400 mt-1 text-sm sm:text-base">
-                Here's what's happening with your inventory today
-            </p>
+            <p class="eyebrow">Inventory overview</p>
+            <h1 class="page-title">Good morning, {{ user.username|title }} 👋</h1>
+            <p class="page-subtitle">Here's what's happening with your inventory today.</p>
         </div>
-        
-        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+
+        <div class="header-actions">
             <form method="post" action="{% url 'inventory:run_expiry_check' %}">
                 {% csrf_token %}
-                <button type="submit" 
-                        class="bg-green-600 hover:bg-amber-500 px-5 sm:px-6 py-2.5 sm:py-3 rounded-2xl font-semibold flex items-center gap-2 transition-all text-sm sm:text-base">
-                    <span>🔄</span> Run Expiry Check Now
+                <button type="submit" class="primary-button">
+                    <span aria-hidden="true">↻</span>
+                    Run expiry check
                 </button>
             </form>
-            
-            <div class="text-left sm:text-right">
-                <p class="text-sm text-slate-400">Today</p>
-                <p class="text-xl sm:text-2xl font-semibold text-red-700">{{ today|date:"d F Y" }}</p>
+
+            <div class="date-card">
+                <span class="date-label">Today</span>
+                <strong>{{ today|date:"d F Y" }}</strong>
             </div>
         </div>
-    </div>
+    </header>
 
-    <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <div class="bg-slate-800 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-cyan-500/30 hover:border-cyan-500 transition-all">
-            <div class="flex justify-between items-start">
+    <!-- Summary cards -->
+    <section class="stats-grid" aria-label="Inventory statistics">
+        <article class="glass-card stat-card" data-accent="cyan">
+            <div>
+                <p class="stat-label">Total products</p>
+                <p class="stat-value">{{ total_products }}</p>
+            </div>
+            <span class="stat-icon" aria-hidden="true">📦</span>
+        </article>
+
+        <article class="glass-card stat-card" data-accent="green">
+            <div>
+                <p class="stat-label">Stock on hand</p>
+                <p class="stat-value">{{ total_soh }}</p>
+            </div>
+            <span class="stat-icon" aria-hidden="true">📊</span>
+        </article>
+
+        <article class="glass-card stat-card" data-accent="amber">
+            <div>
+                <p class="stat-label">Near expiry</p>
+                <p class="stat-value">{{ near_expiry }}</p>
+            </div>
+            <span class="stat-icon" aria-hidden="true">⏰</span>
+        </article>
+
+        <article class="glass-card stat-card" data-accent="red">
+            <div>
+                <p class="stat-label">Expired</p>
+                <p class="stat-value">{{ expired }}</p>
+            </div>
+            <span class="stat-icon" aria-hidden="true">⚠️</span>
+        </article>
+    </section>
+
+    <!-- Expiring and expired batches -->
+    <section class="tables-grid">
+        <article class="glass-card table-card">
+            <div class="section-heading">
                 <div>
-                    <p class="text-cyan-400 text-xs sm:text-sm font-medium tracking-widest">TOTAL PRODUCTS</p>
-                    <p class="text-4xl sm:text-5xl font-bold mt-3 sm:mt-4">{{ total_products }}</p>
+                    <p class="eyebrow">Expiry monitoring</p>
+                    <h2>🔥 Expiring soon <span class="heading-note">FEFO</span></h2>
                 </div>
-                <span class="text-3xl sm:text-4xl">📦</span>
-            </div>
-        </div>
-
-        <div class="bg-slate-800 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-emerald-500/30 hover:border-emerald-500 transition-all">
-            <div class="flex justify-between items-start">
-                <div>
-                    <p class="text-emerald-400 text-xs sm:text-sm font-medium tracking-widest">STOCK ON HAND</p>
-                    <p class="text-4xl sm:text-5xl font-bold mt-3 sm:mt-4">{{ total_soh }}</p>
-                </div>
-                <span class="text-3xl sm:text-4xl">📊</span>
-            </div>
-        </div>
-
-        <div class="bg-slate-800 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-amber-500/30 hover:border-amber-500 transition-all">
-            <div class="flex justify-between items-start">
-                <div>
-                    <p class="text-amber-400 text-xs sm:text-sm font-medium tracking-widest">NEAR EXPIRY</p>
-                    <p class="text-4xl sm:text-5xl font-bold mt-3 sm:mt-4 text-amber-400">{{ near_expiry }}</p>
-                </div>
-                <span class="text-3xl sm:text-4xl">⏰</span>
-            </div>
-        </div>
-
-        <div class="bg-slate-800 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-red-500/30 hover:border-red-500 transition-all">
-            <div class="flex justify-between items-start">
-                <div>
-                    <p class="text-red-400 text-xs sm:text-sm font-medium tracking-widest">EXPIRED</p>
-                    <p class="text-4xl sm:text-5xl font-bold mt-3 sm:mt-4 text-red-400">{{ expired }}</p>
-                </div>
-                <span class="text-3xl sm:text-4xl">⚠️</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Two equal tables -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
-
-        <!-- Expiring Soon Table -->
-        <div class="lg:col-span-6 bg-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8 flex flex-col">
-            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5">
-                <h2 class="text-xl sm:text-2xl font-semibold text-amber-400 flex items-center gap-2">
-                    <span>🔥</span> Expiring Soon (FEFO)
-                </h2>
-                <a href="{% url 'inventory:expiring_soon' %}" 
-                   class="text-cyan-400 hover:text-cyan-300 text-sm font-medium">
-                    View All →
+                <a href="{% url 'inventory:expiring_soon' %}" class="text-link">
+                    View all <span aria-hidden="true">→</span>
                 </a>
             </div>
-            
-            <div class="overflow-auto custom-scrollbar flex-1 max-h-[520px]">
-                <table class="w-full min-w-[580px]">
-                    <thead class="sticky top-0 bg-slate-800 z-10">
-                        <tr class="border-b border-slate-700 text-slate-400 text-sm">
-                            <th class="py-3 text-left">Product</th>
-                            <th class="py-3 text-left">Batch</th>
-                            <th class="py-3 text-left">Expiry Date</th>
-                            <th class="py-3 text-left">Days Left</th>
-                            <th class="py-3 text-right">Quantity</th>
+
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Batch</th>
+                            <th>Expiry date</th>
+                            <th>Days left</th>
+                            <th class="align-right">Quantity</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-700">
+                    <tbody>
                         {% for batch in expiring_soon %}
-                        <tr class="hover:bg-slate-700/50 transition-colors">
-                            <td class="py-4">
-                                <span class="font-mono text-teal-300 text-sm">{{ batch.product.icode }}</span>
-                                <div class="text-sm text-white">{{ batch.product.name }}</div>
+                        <tr>
+                            <td>
+                                <span class="product-code">{{ batch.product.icode }}</span>
+                                <span class="product-name">{{ batch.product.name }}</span>
                             </td>
-                            <td class="py-4 font-mono text-sm">{{ batch.batch_number }}</td>
-                            <td class="py-4 text-slate-300 text-sm">{{ batch.expiry_date }}</td>
-                            <td class="py-4">
-                                <span class="{{ batch.get_expiry_color }} font-medium text-sm">
+                            <td class="batch-code">{{ batch.batch_number }}</td>
+                            <td>{{ batch.expiry_date }}</td>
+                            <td>
+                                <span class="{{ batch.get_expiry_color }}">
                                     {{ batch.expiry_status_display }}
                                 </span>
                             </td>
-                            <td class="py-4 text-right font-semibold">{{ batch.current_quantity }}</td>
+                            <td class="align-right quantity-cell">{{ batch.current_quantity }}</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="py-16 text-center text-slate-400">
-                                No batches are expiring soon.
-                            </td>
+                            <td colspan="5" class="empty-state">No batches are expiring soon.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-        </div>
+        </article>
 
-        <!-- Expired Batches Table -->
-        <div class="lg:col-span-6 bg-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8 flex flex-col">
-            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5">
-                <h2 class="text-xl sm:text-2xl font-semibold text-red-400 flex items-center gap-2">
-                    <span>⚠️</span> Expired Batches
-                </h2>
-                <a href="{% url 'inventory:expired_batches' %}" 
-                   class="text-cyan-400 hover:text-cyan-300 text-sm font-medium">
-                    View All →
+        <article class="glass-card table-card">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Expiry monitoring</p>
+                    <h2>⚠️ Expired batches</h2>
+                </div>
+                <a href="{% url 'inventory:expired_batches' %}" class="text-link">
+                    View all <span aria-hidden="true">→</span>
                 </a>
             </div>
-            
-            <div class="overflow-auto custom-scrollbar flex-1 max-h-[520px]">
-                <table class="w-full min-w-[580px]">
-                    <thead class="sticky top-0 bg-slate-800 z-10">
-                        <tr class="border-b border-slate-700 text-slate-400 text-sm">
-                            <th class="py-3 text-left">Product</th>
-                            <th class="py-3 text-left">Batch</th>
-                            <th class="py-3 text-left">Expiry Date</th>
-                            <th class="py-3 text-left">Days Expired</th>
-                            <th class="py-3 text-right">Quantity</th>
+
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Batch</th>
+                            <th>Expiry date</th>
+                            <th>Days expired</th>
+                            <th class="align-right">Quantity</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-700">
+                    <tbody>
                         {% for batch in expired_batches %}
-                        <tr class="hover:bg-slate-700/50 transition-colors">
-                            <td class="py-4">
-                                <span class="font-mono text-teal-300 text-sm">{{ batch.product.icode }}</span>
-                                <div class="text-sm text-white">{{ batch.product.name }}</div>
+                        <tr>
+                            <td>
+                                <span class="product-code">{{ batch.product.icode }}</span>
+                                <span class="product-name">{{ batch.product.name }}</span>
                             </td>
-                            <td class="py-4 font-mono text-sm">{{ batch.batch_number }}</td>
-                            <td class="py-4 text-slate-300 text-sm">{{ batch.expiry_date }}</td>
-                            <td class="py-4">
-                                <span class="text-red-400 font-medium text-sm">
-                                    {{ batch.days_to_expiry }} days ago
-                                </span>
-                            </td>
-                            <td class="py-4 text-right font-semibold">{{ batch.current_quantity }}</td>
+                            <td class="batch-code">{{ batch.batch_number }}</td>
+                            <td>{{ batch.expiry_date }}</td>
+                            <td class="expired-text">{{ batch.days_to_expiry }} days ago</td>
+                            <td class="align-right quantity-cell">{{ batch.current_quantity }}</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="py-16 text-center text-slate-400">
-                                No expired batches at the moment.
-                            </td>
+                            <td colspan="5" class="empty-state">No expired batches at the moment.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-        </div>
-    </div>
+        </article>
+    </section>
 
-    <!-- ==================== RECENT ALERTS ==================== -->
-    <div class="bg-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
-            <h2 class="text-xl sm:text-2xl font-semibold text-white flex items-center gap-2">
-                <span>🛎️</span> Recent Alerts
-            </h2>
+    <!-- Recent alerts -->
+    <section class="glass-card alerts-card">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Stay informed</p>
+                <h2>🛎️ Recent alerts</h2>
+            </div>
 
-            <div class="flex items-center gap-3">
+            <div class="alert-heading-actions">
                 {% if unread_count > 0 %}
-                <span class="bg-red-500/20 text-red-400 px-3 py-1 text-xs rounded-full font-medium">
-                    {{ unread_count }} new
-                </span>
+                <span class="unread-badge">{{ unread_count }} new</span>
                 {% endif %}
-                <a href="{% url 'alerts:notification_list' %}" 
-                   class="text-cyan-400 hover:text-cyan-300 text-sm font-medium">
-                    View All →
+                <a href="{% url 'alerts:notification_list' %}" class="text-link">
+                    View all <span aria-hidden="true">→</span>
                 </a>
             </div>
         </div>
 
         {% if notifications %}
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div class="alerts-grid">
             {% for n in notifications %}
-            <div class="bg-slate-900 rounded-2xl p-5 border-l-4 
-                        {% if n.notification_type == 'expired' %}border-red-500
-                        {% else %}border-amber-500{% endif %}
-                        hover:bg-slate-900/80 transition-colors">
-                <div class="font-medium text-white text-sm">{{ n.title }}</div>
-                <p class="text-slate-400 text-xs mt-2 line-clamp-2">{{ n.message }}</p>
-                <p class="text-xs text-slate-500 mt-3">{{ n.created_at|timesince }} ago</p>
-            </div>
+            <article class="alert-item
+                            {% if n.notification_type == 'expired' %}alert-expired{% else %}alert-warning{% endif %}">
+                <div class="alert-title">{{ n.title }}</div>
+                <p>{{ n.message }}</p>
+                <time>{{ n.created_at|timesince }} ago</time>
+            </article>
             {% endfor %}
         </div>
         {% else %}
-        <div class="text-center py-12">
-            <p class="text-3xl mb-3">🎉</p>
-            <p class="text-slate-400">All caught up! No recent alerts.</p>
+        <div class="empty-alerts">
+            <span aria-hidden="true">🎉</span>
+            <p>All caught up! No recent alerts.</p>
         </div>
         {% endif %}
-    </div>
+    </section>
 
-    <!-- Quick Actions -->
-    <div>
-        <h2 class="text-lg sm:text-xl font-semibold mb-4 sm:mb-5 text-slate-300">Quick Actions</h2>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            <a href="{% url 'inventory:product_list' %}" 
-               class="bg-slate-800 hover:bg-slate-700 p-5 sm:p-6 rounded-2xl sm:rounded-3xl text-center transition-all border border-slate-700 hover:border-teal-400">
-                <span class="block text-2xl sm:text-3xl mb-2 sm:mb-3">📦</span>
-                <span class="font-semibold text-sm sm:text-base">Manage Products</span>
+    <!-- Quick actions -->
+    <section class="quick-actions-section">
+        <div class="section-heading quick-heading">
+            <div>
+                <p class="eyebrow">Shortcuts</p>
+                <h2>Quick actions</h2>
+            </div>
+        </div>
+
+        <div class="quick-actions-grid">
+            <a href="{% url 'inventory:product_list' %}" class="glass-card action-card">
+                <span class="action-icon">📦</span>
+                <span>Manage products</span>
+                <span class="action-arrow" aria-hidden="true">↗</span>
             </a>
-            
-            <a href="{% url 'inventory:batch_list' %}" 
-               class="bg-slate-800 hover:bg-slate-700 p-5 sm:p-6 rounded-2xl sm:rounded-3xl text-center transition-all border border-slate-700 hover:border-emerald-400">
-                <span class="block text-2xl sm:text-3xl mb-2 sm:mb-3">📋</span>
-                <span class="font-semibold text-sm sm:text-base">View Batches</span>
+
+            <a href="{% url 'inventory:batch_list' %}" class="glass-card action-card">
+                <span class="action-icon">📋</span>
+                <span>View batches</span>
+                <span class="action-arrow" aria-hidden="true">↗</span>
             </a>
-            
-            <a href="{% url 'inventory:scanner' %}" 
-               class="bg-slate-800 hover:bg-slate-700 p-5 sm:p-6 rounded-2xl sm:rounded-3xl text-center transition-all border border-slate-700 hover:border-amber-400">
-                <span class="block text-2xl sm:text-3xl mb-2 sm:mb-3">📱</span>
-                <span class="font-semibold text-sm sm:text-base">Barcode Scanner</span>
+
+            <a href="{% url 'inventory:scanner' %}" class="glass-card action-card">
+                <span class="action-icon">📱</span>
+                <span>Barcode scanner</span>
+                <span class="action-arrow" aria-hidden="true">↗</span>
             </a>
-            
-            <a href="{% url 'alerts:notification_list' %}" 
-               class="bg-slate-800 hover:bg-slate-700 p-5 sm:p-6 rounded-2xl sm:rounded-3xl text-center transition-all border border-slate-700 hover:border-cyan-400">
-                <span class="block text-2xl sm:text-3xl mb-2 sm:mb-3">🛎️</span>
-                <span class="font-semibold text-sm sm:text-base">Notifications</span>
+
+            <a href="{% url 'alerts:notification_list' %}" class="glass-card action-card">
+                <span class="action-icon">🛎️</span>
+                <span>Notifications</span>
+                <span class="action-arrow" aria-hidden="true">↗</span>
             </a>
         </div>
-    </div>
-
+    </section>
 </div>
 
 <style>
-    [x-cloak] { display: none !important; }
+    .dashboard {
+        display: grid;
+        gap: 1.5rem;
+    }
 
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 5px;
-        height: 5px;
+    .dashboard-header,
+    .header-actions,
+    .section-heading,
+    .alert-heading-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
     }
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: transparent;
+
+    .dashboard-header {
+        padding: 0.5rem 0 0.25rem;
     }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: #334155;
-        border-radius: 9999px;
-        transition: background-color 0.2s ease;
+
+    .eyebrow {
+        margin: 0 0 0.45rem;
+        color: var(--accent);
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
     }
-    .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-        background-color: #64748b;
+
+    .page-title {
+        margin: 0;
+        color: var(--text);
+        font-size: clamp(1.8rem, 4vw, 2.65rem);
+        font-weight: 780;
+        letter-spacing: -0.045em;
+        line-height: 1.12;
     }
-    .custom-scrollbar::-webkit-scrollbar-thumb:active {
-        background-color: #94a3b8;
+
+    .page-subtitle {
+        margin: 0.65rem 0 0;
+        color: var(--muted);
+        font-size: 0.95rem;
     }
-    .custom-scrollbar {
+
+    .header-actions {
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .primary-button {
+        min-height: 46px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+        padding: 0.75rem 1.1rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 15px;
+        color: #fff;
+        background: linear-gradient(135deg, #10a98f, #0f766e);
+        box-shadow: 0 10px 24px rgba(13, 148, 136, 0.22);
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.86rem;
+        font-weight: 700;
+        transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .primary-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 28px rgba(13, 148, 136, 0.28);
+    }
+
+    .primary-button span {
+        font-size: 1.2rem;
+        line-height: 1;
+    }
+
+    .date-card {
+        min-width: 132px;
+        display: grid;
+        gap: 0.2rem;
+        padding: 0.55rem 0 0.55rem 1rem;
+        border-left: 1px solid var(--line);
+    }
+
+    .date-label {
+        color: var(--muted);
+        font-size: 0.75rem;
+    }
+
+    .date-card strong {
+        color: var(--text);
+        font-size: 0.95rem;
+        font-weight: 700;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .glass-card {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px) saturate(145%);
+        -webkit-backdrop-filter: blur(18px) saturate(145%);
+    }
+
+    .glass-card::before {
+        position: absolute;
+        inset: 0 0 auto;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+        content: "";
+        pointer-events: none;
+    }
+
+    [data-theme="dark"] .glass-card::before {
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    }
+
+    .stat-card {
+        min-height: 150px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1.4rem;
+        transition: transform 180ms ease, border-color 180ms ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+    }
+
+    .stat-card[data-accent="cyan"] { --card-accent: #0891b2; --card-glow: rgba(6, 182, 212, 0.12); }
+    .stat-card[data-accent="green"] { --card-accent: #059669; --card-glow: rgba(16, 185, 129, 0.12); }
+    .stat-card[data-accent="amber"] { --card-accent: #d97706; --card-glow: rgba(245, 158, 11, 0.13); }
+    .stat-card[data-accent="red"] { --card-accent: #dc2626; --card-glow: rgba(239, 68, 68, 0.12); }
+
+    [data-theme="dark"] .stat-card[data-accent="cyan"] { --card-accent: #67e8f9; }
+    [data-theme="dark"] .stat-card[data-accent="green"] { --card-accent: #6ee7b7; }
+    [data-theme="dark"] .stat-card[data-accent="amber"] { --card-accent: #fcd34d; }
+    [data-theme="dark"] .stat-card[data-accent="red"] { --card-accent: #fca5a5; }
+
+    .stat-label {
+        margin: 0;
+        color: var(--card-accent);
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+    }
+
+    .stat-value {
+        margin: 0.75rem 0 0;
+        color: var(--text);
+        font-size: clamp(2rem, 4vw, 2.65rem);
+        font-weight: 780;
+        letter-spacing: -0.05em;
+        line-height: 1;
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--card-glow);
+        font-size: 1.45rem;
+    }
+
+    .tables-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1.15rem;
+    }
+
+    .table-card,
+    .alerts-card {
+        min-width: 0;
+        padding: 1.35rem;
+    }
+
+    .section-heading {
+        margin-bottom: 1.1rem;
+    }
+
+    .section-heading h2 {
+        margin: 0;
+        color: var(--text);
+        font-size: 1.18rem;
+        font-weight: 750;
+        letter-spacing: -0.025em;
+    }
+
+    .heading-note {
+        display: inline-block;
+        margin-left: 0.25rem;
+        padding: 0.2rem 0.45rem;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 0.6rem;
+        font-weight: 750;
+        letter-spacing: 0.08em;
+        vertical-align: middle;
+    }
+
+    .text-link {
+        flex: 0 0 auto;
+        color: var(--accent);
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-decoration: none;
+        transition: opacity 150ms ease;
+    }
+
+    .text-link:hover {
+        opacity: 0.72;
+    }
+
+    .table-scroll {
+        max-height: 460px;
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        scrollbar-color: rgba(100, 116, 139, 0.55) transparent;
         scrollbar-width: thin;
-        scrollbar-color: #334155 transparent;
     }
-    .custom-scrollbar:hover {
-        scrollbar-color: #64748b transparent;
+
+    .table-scroll::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    .table-scroll::-webkit-scrollbar-thumb {
+        border-radius: 99px;
+        background: rgba(100, 116, 139, 0.45);
+    }
+
+    .data-table {
+        width: 100%;
+        min-width: 570px;
+        border-collapse: separate;
+        border-spacing: 0;
+        color: var(--text);
+        font-size: 0.79rem;
+        text-align: left;
+    }
+
+    .data-table th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        padding: 0.8rem 0.75rem;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        background: var(--surface-strong);
+        font-size: 0.67rem;
+        font-weight: 750;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+    }
+
+    .data-table td {
+        padding: 0.85rem 0.75rem;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        vertical-align: middle;
+    }
+
+    .data-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .data-table tbody tr {
+        transition: background 150ms ease;
+    }
+
+    .data-table tbody tr:hover {
+        background: var(--accent-soft);
+    }
+
+    .product-code,
+    .product-name {
+        display: block;
+    }
+
+    .product-code,
+    .batch-code {
+        color: var(--accent);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.73rem;
+    }
+
+    .product-name {
+        margin-top: 0.2rem;
+        color: var(--text);
+        font-size: 0.79rem;
+        font-weight: 600;
+    }
+
+    .quantity-cell {
+        color: var(--text) !important;
+        font-weight: 750;
+    }
+
+    .align-right {
+        text-align: right !important;
+    }
+
+    .expired-text {
+        color: #dc2626 !important;
+        font-weight: 700;
+    }
+
+    [data-theme="dark"] .expired-text {
+        color: #fca5a5 !important;
+    }
+
+    .empty-state {
+        height: 150px;
+        color: var(--muted) !important;
+        text-align: center;
+    }
+
+    .alert-heading-actions {
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .unread-badge {
+        padding: 0.35rem 0.65rem;
+        border: 1px solid rgba(239, 68, 68, 0.18);
+        border-radius: 999px;
+        color: #dc2626;
+        background: rgba(239, 68, 68, 0.1);
+        font-size: 0.7rem;
+        font-weight: 750;
+    }
+
+    [data-theme="dark"] .unread-badge {
+        color: #fca5a5;
+    }
+
+    .alerts-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.85rem;
+    }
+
+    .alert-item {
+        padding: 1rem;
+        border: 1px solid var(--line);
+        border-left: 3px solid #f59e0b;
+        border-radius: 14px;
+        background: var(--surface-soft);
+        transition: transform 150ms ease;
+    }
+
+    .alert-item:hover {
+        transform: translateY(-2px);
+    }
+
+    .alert-item.alert-expired {
+        border-left-color: #ef4444;
+    }
+
+    .alert-item.alert-warning {
+        border-left-color: #f59e0b;
+    }
+
+    .alert-title {
+        color: var(--text);
+        font-size: 0.83rem;
+        font-weight: 700;
+    }
+
+    .alert-item p {
+        display: -webkit-box;
+        overflow: hidden;
+        margin: 0.45rem 0 0;
+        color: var(--muted);
+        font-size: 0.76rem;
+        line-height: 1.5;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+
+    .alert-item time {
+        display: block;
+        margin-top: 0.7rem;
+        color: var(--muted);
+        font-size: 0.68rem;
+    }
+
+    .empty-alerts {
+        display: grid;
+        justify-items: center;
+        gap: 0.35rem;
+        padding: 2rem 1rem;
+        color: var(--muted);
+        text-align: center;
+    }
+
+    .empty-alerts span {
+        font-size: 2rem;
+    }
+
+    .empty-alerts p {
+        margin: 0;
+    }
+
+    .quick-actions-section {
+        padding-top: 0.2rem;
+    }
+
+    .quick-heading {
+        margin-bottom: 0.8rem;
+    }
+
+    .quick-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.85rem;
+    }
+
+    .action-card {
+        min-height: 118px;
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        padding: 1.1rem;
+        color: var(--text);
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-decoration: none;
+        transition: transform 170ms ease, border-color 170ms ease,
+                    background 170ms ease;
+    }
+
+    .action-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(20, 184, 166, 0.5);
+        background: var(--surface-strong);
+    }
+
+    .action-icon {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--accent-soft);
+        font-size: 1.25rem;
+    }
+
+    .action-arrow {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 1rem;
+    }
+
+    @media (max-width: 1050px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .tables-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .alerts-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 700px) {
+        .dashboard-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .header-actions {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .quick-actions-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .table-card,
+        .alerts-card {
+            padding: 1rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .dashboard {
+            gap: 1rem;
+        }
+
+        .stats-grid {
+            gap: 0.7rem;
+        }
+
+        .stat-card {
+            min-height: 125px;
+            padding: 1rem;
+            border-radius: 18px;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 13px;
+            font-size: 1.2rem;
+        }
+
+        .stat-value {
+            margin-top: 0.6rem;
+            font-size: 2rem;
+        }
+
+        .header-actions {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .header-actions form,
+        .primary-button {
+            width: 100%;
+        }
+
+        .date-card {
+            padding: 0.2rem 0;
+            border-left: 0;
+        }
+
+        .section-heading {
+            align-items: flex-start;
+        }
+
+        .section-heading h2 {
+            font-size: 1.03rem;
+        }
+
+        .alerts-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .quick-actions-grid {
+            gap: 0.65rem;
+        }
+
+        .action-card {
+            min-height: 105px;
+            gap: 0.6rem;
+            padding: 0.85rem;
+            font-size: 0.73rem;
+        }
+
+        .action-icon {
+            width: 36px;
+            height: 36px;
+            font-size: 1.05rem;
+        }
+
+        .action-arrow {
+            display: none;
+        }
     }
 </style>
 {% endblock %}

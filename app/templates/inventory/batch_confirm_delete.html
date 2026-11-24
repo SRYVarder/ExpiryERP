@@ -1,35 +1,22 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<div class="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-6">
-    <div class="max-w-md w-full">
-        <div class="bg-slate-800 rounded-3xl p-10 text-center shadow-2xl border border-slate-700">
-            
-            <h2 class="text-3xl font-bold text-red-400 mb-6">Delete Batch?</h2>
-            
-            <p class="text-slate-300 mb-8">
-                Are you sure you want to permanently delete the batch 
-                <strong class="text-white">"{{ batch.batch_number }}"</strong> 
-                from product <strong>{{ batch.product.name }}</strong>?
-            </p>
-            
-            <p class="text-red-400 text-sm mb-10">
-                This action cannot be undone.
-            </p>
+{% block title %}Delete Batch · REGON ExpiryERP{% endblock %}
 
-            <form method="post" class="flex justify-center gap-4">
-                {% csrf_token %}
-                <button type="submit" 
-                        class="bg-red-600 hover:bg-red-700 px-8 py-4 rounded-2xl font-semibold transition-colors">
-                    Yes, Delete Batch
-                </button>
-                
-                <a href="{% url 'inventory:product_detail' batch.product.icode %}" 
-                   class="bg-slate-700 hover:bg-slate-600 px-8 py-4 rounded-2xl font-medium">
-                    Cancel
-                </a>
-            </form>
-        </div>
-    </div>
+{% block content %}
+<div class="glass-card erp-confirm-card">
+    <p class="erp-eyebrow">Destructive action</p>
+    <h2 class="erp-title" style="font-size: 1.5rem;">Delete Batch?</h2>
+    <p class="erp-subtitle" style="margin-top: 0.75rem;">
+        Are you sure you want to permanently delete the batch
+        <strong class="cell-strong">"{{ batch.batch_number }}"</strong>
+        from product <strong class="cell-strong">{{ batch.product.name }}</strong>?
+    </p>
+    <p class="erp-error" style="margin-top: 0.65rem;">This action cannot be undone.</p>
+
+    <form method="post" class="erp-actions" style="justify-content: center; margin-top: 1.5rem;">
+        {% csrf_token %}
+        <button type="submit" class="btn-danger">Yes, Delete Batch</button>
+        <a href="{% url 'inventory:batch_list' %}" class="btn-secondary">Cancel</a>
+    </form>
 </div>
 {% endblock %}

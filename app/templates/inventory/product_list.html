@@ -1,137 +1,126 @@
 {% extends 'base.html' %}
 
+{% block title %}Products · REGON ExpiryERP{% endblock %}
+
 {% block content %}
-<div class="space-y-6 sm:space-y-8">
-
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+<div class="erp-page" x-data="{ deleteModalOpen: false, deleteUrl: '', deleteLabel: '' }">
+    <header class="erp-header">
         <div>
-            <h1 class="text-3xl sm:text-4xl font-bold text-white">Products</h1>
-            <p class="text-slate-400 text-sm mt-1">Total: {{ total_products }} products</p>
+            <p class="erp-eyebrow">Master catalog</p>
+            <h1 class="erp-title">Products</h1>
+            <p class="erp-subtitle">Total: {{ total_products }} products</p>
         </div>
-        
-        <div class="flex flex-col sm:flex-row gap-3">
-            
-            <a href="{% url 'inventory:product_create' %}" 
-               class="bg-teal-600 hover:bg-teal-500 px-5 py-3 rounded-2xl font-semibold text-center text-sm sm:text-base flex items-center justify-center gap-2">
-                <span class="text-lg">+</span> Add Product
-            </a>
-            <a href="{% url 'inventory:batch_create' %}" 
-               class="bg-teal-500 hover:bg-teal-400 px-5 py-3 rounded-2xl font-semibold text-center text-sm sm:text-base flex items-center justify-center gap-2">
-                <span class="text-lg">+</span> Add Batch
-            </a>
-            <a href="{% url 'inventory:bulk_product_upload' %}" 
-               class="bg-red-600 hover:bg-emerald-500 px-5 py-3 rounded-2xl font-medium text-center text-sm sm:text-base">
-                📤 Bulk Upload
-            </a>
-        </div>
-    </div>
 
-    <!-- Search -->
-    <form method="GET" class="flex flex-col sm:flex-row gap-3">
-        <input type="text" name="search" value="{{ search_query }}"
-               placeholder="Search by Icode, Name or Scode..."
-               class="bg-slate-800 border border-slate-700 rounded-2xl px-5 py-3.5 w-full focus:outline-none focus:border-teal-500 text-white">
-        
-        {% if category_filter %}
+        <div class="erp-actions">
+            <a href="{% url 'inventory:product_create' %}" class="btn-primary">+ Add Product</a>
+            <a href="{% url 'inventory:batch_create' %}" class="btn-secondary">+ Add Batch</a>
+            <a href="{% url 'inventory:bulk_product_upload' %}" class="btn-secondary">📤 Bulk Upload</a>
+        </div>
+    </header>
+
+    <section class="glass-card" style="display: grid; gap: 1.15rem;">
+        <form method="get" class="erp-search-bar">
+            <input type="text"
+                   name="q"
+                   value="{{ search_query }}"
+                   class="erp-input"
+                   style="max-width: 340px;"
+                   placeholder="Search product name or Icode...">
+            {% if category_filter %}
             <input type="hidden" name="category" value="{{ category_filter }}">
-        {% endif %}
+            {% endif %}
+            <button type="submit" class="btn-secondary">Search</button>
+            {% if search_query or category_filter %}
+            <a href="{% url 'inventory:product_list' %}" class="btn-secondary">Clear</a>
+            {% endif %}
+        </form>
 
-        <button type="submit" class="bg-teal-600 hover:bg-teal-500 px-8 py-3.5 rounded-2xl font-medium whitespace-nowrap">
-            Search
-        </button>
-    </form>
-
-    <!-- Products Table -->
-    <div class="bg-slate-800 rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-700">
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[700px]">
-                <thead class="bg-slate-700/80">
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
                     <tr>
-                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium text-teal-300">Icode</th>
-                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium">Product Name</th>
-                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium">Category</th>
-                        <th class="px-4 sm:px-6 py-4 text-right text-sm font-medium">SoH</th>
-                        <th class="px-4 sm:px-6 py-4 text-right text-sm font-medium">Price</th>
-                        <th class="px-4 sm:px-6 py-4 text-center text-sm font-medium">Actions</th>
+                        <th>Icode</th>
+                        <th>Product Name</th>
+                        <th>Category</th>
+                        <th class="align-right">SoH</th>
+                        <th class="align-right">Price</th>
+                        <th class="align-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-700">
+                <tbody>
                     {% for product in products %}
-                    <tr class="hover:bg-slate-700/40 transition-colors">
-                        <td class="px-4 sm:px-6 py-4 font-mono text-emerald-400 text-sm">{{ product.icode }}</td>
-                        <td class="px-4 sm:px-6 py-4">{{ product.name }}</td>
-                        <td class="px-4 sm:px-6 py-4 text-sm">
+                    <tr>
+                        <td class="mono-code">{{ product.icode }}</td>
+                        <td class="cell-strong">{{ product.name }}</td>
+                        <td>
                             {% if product.category %}
-                                <span class="bg-slate-600 px-3 py-1 rounded-full text-xs">{{ product.category.name }}</span>
-                            {% else %}—{% endif %}
+                                <span class="badge badge-neutral">{{ product.category.name }}</span>
+                            {% else %}
+                                —
+                            {% endif %}
                         </td>
-                        <td class="px-4 sm:px-6 py-4 text-right font-semibold text-emerald-400">{{ product.soh }}</td>
-                        <td class="px-4 sm:px-6 py-4 text-right text-sm">KES {{ product.selling_price|floatformat:2 }}</td>
-                        <td class="px-4 sm:px-6 py-4 text-center">
-                            <div class="flex justify-center gap-3 text-sm">
-                                <a href="{% url 'inventory:product_detail' product.icode %}" class="text-violet-400 hover:text-violet-300">👁️ View</a>
-                                <a href="{% url 'inventory:product_update' product.icode %}" class="text-amber-400 hover:text-amber-300">✏️ Edit</a>
-                                <button @click="showDeleteModal = true; deleteUrl = '{% url 'inventory:product_delete' product.icode %}'; deleteName = '{{ product.name }}'"
-                                        class="text-red-400 hover:text-red-300">🗑️ Delete</button>
-                            </div>
+                        <td class="align-right cell-strong">{{ product.soh }}</td>
+                        <td class="align-right">KES {{ product.selling_price|floatformat:2 }}</td>
+                        <td class="align-right" style="white-space: nowrap;">
+                            <a href="{% url 'inventory:product_detail' product.pk %}" class="btn-secondary btn-sm">👁 View</a>
+                            <a href="{% url 'inventory:product_update' product.pk %}" class="btn-secondary btn-sm">✏ Edit</a>
+                            <button type="button"
+                                    class="btn-danger btn-sm"
+                                    @click="deleteUrl = '{% url 'inventory:product_delete' product.pk %}'; deleteLabel = '{{ product.name|escapejs }} ({{ product.icode|escapejs }})'; deleteModalOpen = true">
+                                🗑 Delete
+                            </button>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="px-6 py-16 text-center text-slate-400">
-                            No products found.
-                        </td>
+                        <td colspan="6" style="text-align: center; padding: 2.5rem 1rem;">No products found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-    </div>
 
-    <!-- Pagination -->
-    {% if page_obj.has_other_pages %}
-    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
-        <p class="text-slate-400 text-sm">
-            Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-        </p>
-
-        <div class="flex items-center gap-2">
-            {% if page_obj.has_previous %}
-                <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}"
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    First
-                </a>
-                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}"
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    Previous
-                </a>
-            {% endif %}
-
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <span class="px-3.5 py-2 rounded-xl bg-teal-600 text-sm font-medium">{{ num }}</span>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                    <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}"
-                       class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                        {{ num }}
-                    </a>
+        {% if page_obj.has_other_pages %}
+        <nav class="erp-pagination" aria-label="Pagination">
+            <span>Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            <div class="erp-page-links">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1{% if search_query %}&q={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn-secondary btn-sm">First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn-secondary btn-sm">Previous</a>
                 {% endif %}
-            {% endfor %}
 
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}"
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    Next
-                </a>
-                <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}"
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    Last
-                </a>
-            {% endif %}
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <span class="btn-primary btn-sm">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <a href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn-secondary btn-sm">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn-secondary btn-sm">Next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&q={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn-secondary btn-sm">Last</a>
+                {% endif %}
+            </div>
+        </nav>
+        {% endif %}
+    </section>
+
+    <!-- Delete Product Modal -->
+    <div class="erp-modal-backdrop" x-show="deleteModalOpen" x-cloak x-transition.opacity>
+        <div class="glass-card erp-modal" @click.outside="deleteModalOpen = false">
+            <p class="erp-eyebrow">Confirm deletion</p>
+            <h3 class="erp-title" style="font-size: 1.35rem;">Delete Product?</h3>
+            <p class="erp-subtitle" style="margin-top: 0.6rem;">
+                Are you sure you want to delete <strong class="cell-strong" x-text="deleteLabel"></strong>?
+                This action cannot be undone.
+            </p>
+            <form method="post" :action="deleteUrl" class="erp-actions" style="justify-content: flex-end; margin-top: 1.35rem;">
+                {% csrf_token %}
+                <button type="button" class="btn-secondary" @click="deleteModalOpen = false">Cancel</button>
+                <button type="submit" class="btn-danger">Yes, Delete</button>
+            </form>
         </div>
     </div>
-    {% endif %}
-
 </div>
 {% endblock %}

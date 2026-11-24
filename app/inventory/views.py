@@ -1,4 +1,5 @@
 import openpyxl
+from django import forms
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Q
@@ -413,29 +414,49 @@ def batch_create(request, product_icode=None):
         "product": product,
     })
 
+from django import forms
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
+
 @login_required
 def batch_update(request, pk):
     batch = get_object_or_404(Batch, pk=pk)
     product = batch.product
-    
+
     if request.method == 'POST':
         form = BatchForm(request.POST, instance=batch)
-        if form.is_valid():
-            batch=form.save(commit=False)
-            batch.product = product  # Ensure the batch remains linked to the same product
-            batch.save()
+    else:
+        form = BatchForm(instance=batch)
 
-            messages.success(request, f"Batch {batch.batch_number} updated successfully!")
+    # 1. Lock product on edit so Django automatically keeps `batch.product`
+    if 'product' in form.fields:
+        form.fields['product'].disabled = True
+        form.fields['product'].required = False
+
+    # 2. Ensure existing dates render in ISO format (YYYY-MM-DD) for <input type="date">
+    for field in form.fields.values():
+        if isinstance(field, forms.DateField):
+            field.widget.format = '%Y-%m-%d'
+            if getattr(field.widget, 'input_type', None) != 'date':
+                field.widget.input_type = 'date'
+
+    if request.method == 'POST':
+        if form.is_valid():
+            updated_batch = form.save(commit=False)
+            updated_batch.product = product  # Guaranteed to stay linked
+            updated_batch.save()
+
+            messages.success(request, f"Batch {updated_batch.batch_number} updated successfully!")
             return redirect('inventory:product_detail', icode=product.icode)
         else:
             messages.error(request, "Please correct the errors below.")
-    else:
-        form = BatchForm(instance=batch)
-    
+
     return render(request, 'inventory/batch_form.html', {
-        'form': form, 
+        'form': form,
+        'batch': batch,
         'product': product,
-        'title': 'Edit Batch'
+        'title': 'Edit Batch',
     })
 
 

@@ -1,31 +1,21 @@
 {% extends 'base.html' %}
 
+{% block title %}Delete Branch · REGON ExpiryERP{% endblock %}
+
 {% block content %}
-<div class="max-w-lg mx-auto space-y-6">
+<div class="glass-card erp-confirm-card">
+    <p class="erp-eyebrow">Organization structure</p>
+    <h1 class="erp-title" style="font-size: 1.5rem;">Delete Branch</h1>
+    <p class="erp-subtitle" style="margin-top: 0.75rem;">
+        Are you sure you want to delete <strong class="cell-strong">{{ object.name }}</strong>
+        {% if object.code %}<span class="mono-code">({{ object.code }})</span>{% endif %}?
+    </p>
+    <p class="erp-error" style="margin-top: 0.65rem;">This cannot be undone.</p>
 
-    <div class="bg-slate-800 rounded-2xl sm:rounded-3xl border border-slate-700 p-6 sm:p-8">
-        <h1 class="text-2xl sm:text-3xl font-bold text-white mb-3">Delete Branch</h1>
-        <p class="text-slate-400 mb-6">
-            Are you sure you want to delete
-            <span class="text-red-400 font-semibold">{{ object.name }}</span>?
-            {% if object.code %}
-                <span class="font-mono text-slate-500">({{ object.code }})</span>
-            {% endif %}
-            This cannot be undone.
-        </p>
-
-        <form method="post" class="flex flex-col sm:flex-row gap-3">
-            {% csrf_token %}
-            <button type="submit"
-                    class="bg-red-600 hover:bg-red-500 px-6 py-3 rounded-2xl font-semibold transition-colors">
-                Yes, Delete
-            </button>
-            <a href="{% url 'inventory:branch_list' %}"
-               class="bg-slate-700 hover:bg-slate-600 px-6 py-3 rounded-2xl font-medium text-center transition-colors">
-                Cancel
-            </a>
-        </form>
-    </div>
-
+    <form method="post" class="erp-actions" style="justify-content: center; margin-top: 1.5rem;">
+        {% csrf_token %}
+        <button type="submit" class="btn-danger">Yes, Delete</button>
+        <a href="{% url 'inventory:branch_list' %}" class="btn-secondary">Cancel</a>
+    </form>
 </div>
 {% endblock %}

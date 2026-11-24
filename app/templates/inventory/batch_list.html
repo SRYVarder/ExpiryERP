@@ -1,131 +1,96 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<div x-data="{ showDeleteModal: false, deleteUrl: '', deleteName: '' }" 
-     class="space-y-6 sm:space-y-8">
+{% block title %}{% if product %}Batches for {{ product.name }}{% else %}All Batches{% endif %} · REGON ExpiryERP{% endblock %}
 
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+{% block content %}
+<div class="erp-page" x-data="{ deleteModalOpen: false, deleteUrl: '', deleteLabel: '' }">
+    <header class="erp-header">
         <div>
-            <h1 class="text-3xl sm:text-4xl font-bold text-white">
-                {% if product %}
-                    Batches for {{ product.name }}
-                {% else %}
-                    All Batches
-                {% endif %}
+            <p class="erp-eyebrow">FEFO Inventory Tracking</p>
+            <h1 class="erp-title">
+                {% if product %}Batches for {{ product.name }}{% else %}All Batches{% endif %}
             </h1>
-            <p class="text-slate-400 text-sm mt-1">
+            <p class="erp-subtitle">
                 {% if product %}
-                    Product: {{ product.icode }}
+                    Product: <span class="mono-code">{{ product.icode }}</span>
                 {% else %}
                     Total: {{ page_obj.paginator.count }} batches
                 {% endif %}
             </p>
         </div>
-        
-        <div class="flex flex-col sm:flex-row gap-3">
-            
-            <a href="{% url 'inventory:batch_create' %}" 
-               class="bg-teal-600 hover:bg-teal-500 px-5 py-3 rounded-2xl font-semibold text-center text-sm sm:text-base flex items-center justify-center gap-2">
-                <span class="text-lg">+</span> Add Batch
-            </a>
-            <a href="{% url 'inventory:product_create' %}" 
-               class="bg-teal-500 hover:bg-teal-400 px-5 py-3 rounded-2xl font-semibold text-center text-sm sm:text-base flex items-center justify-center gap-2">
-                <span class="text-lg">+</span> Add Product
-            </a>
-            <a href="{% url 'inventory:bulk_batch_upload' %}" 
-               class="bg-red-600 hover:bg-emerald-500 px-5 py-3 rounded-2xl font-medium text-center text-sm sm:text-base">
-                📤 Bulk Upload
-            </a>
+
+        <div class="erp-actions">
+            <a href="{% url 'inventory:batch_create' %}" class="btn-primary">+ Add Batch</a>
+            <a href="{% url 'inventory:product_create' %}" class="btn-secondary">+ Add Product</a>
+            <a href="{% url 'inventory:bulk_batch_upload' %}" class="btn-secondary">📤 Bulk Upload</a>
         </div>
-    </div>
+    </header>
 
-    <!-- Search -->
-    <form method="GET" class="flex flex-col sm:flex-row gap-3">
-        <input type="text" name="search" value="{{ search_query }}"
-               placeholder="Search by Batch Number, Product Name or Icode..."
-               class="bg-slate-800 border border-slate-700 rounded-2xl px-5 py-3.5 w-full focus:outline-none focus:border-teal-500 text-white">
-        
-        <button type="submit" class="bg-teal-600 hover:bg-teal-500 px-8 py-3.5 rounded-2xl font-medium whitespace-nowrap">
-            Search
-        </button>
-    </form>
+    <section class="glass-card" style="display: grid; gap: 1.15rem;">
+        <form method="get" class="erp-search-bar">
+            <input type="text"
+                   name="q"
+                   value="{{ search_query }}"
+                   class="erp-input"
+                   style="max-width: 340px;"
+                   placeholder="Search batch number, product, or code...">
+            <button type="submit" class="btn-secondary">Search</button>
+            {% if search_query %}
+            <a href="{% url 'inventory:batch_list' %}" class="btn-secondary">Clear</a>
+            {% endif %}
+        </form>
 
-    <!-- Batches Table -->
-    <div class="bg-slate-800 rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-700">
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[900px]">
-                <thead class="bg-slate-700/80">
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
                     <tr>
-                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium text-teal-300">Batch</th>
-                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium">Product</th>
-                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium">Days Left</th>
-                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium">Final Expiry</th>
-                        <th class="px-4 sm:px-6 py-4 text-left text-sm font-medium">Sell-By</th>
-                        <th class="px-4 sm:px-6 py-4 text-right text-sm font-medium">Qty</th>
-                        <th class="px-4 sm:px-6 py-4 text-center text-sm font-medium">Status</th>
-                        <th class="px-4 sm:px-6 py-4 text-center text-sm font-medium">Actions</th>
+                        <th>Batch</th>
+                        <th>Product</th>
+                        <th>Days Left</th>
+                        <th>Final Expiry</th>
+                        <th>Sell-By</th>
+                        <th class="align-right">Qty</th>
+                        <th>Status</th>
+                        <th class="align-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-700">
+                <tbody>
                     {% for batch in batches %}
-                    <tr class="hover:bg-slate-700/40 transition-colors">
-                        <td class="px-4 sm:px-6 py-4 font-mono text-emerald-400 text-sm">
-                            {{ batch.batch_number }}
+                    <tr>
+                        <td class="mono-code">{{ batch.batch_number }}</td>
+                        <td>
+                            <div class="cell-strong">{{ batch.product.name }}</div>
+                            <div class="mono-code" style="font-size: 0.7rem;">{{ batch.product.icode }}</div>
                         </td>
-                        <td class="px-4 sm:px-6 py-4">
-                            <div class="font-medium text-sm">{{ batch.product.name }}</div>
-                            <div class="text-xs text-slate-500 font-mono">{{ batch.product.icode }}</div>
-                        </td>
-                        <td class="px-4 sm:px-6 py-4">
-                            <span class="{{ batch.get_expiry_color }} font-medium text-sm">
+                        <td>
+                            <span class="{{ batch.get_expiry_color }}">
                                 {{ batch.expiry_status_display }}
                             </span>
                         </td>
-                        
-                        <td class="px-4 sm:px-6 py-4 text-red-300 text-sm">
-                            {{ batch.expiry_date|date:"d M Y" }}
-                        </td>
-                        <td class="px-4 sm:px-6 py-4 text-slate-300 text-sm">
-                            {{ batch.sell_by_date|date:"d M Y"|default:"—" }}
-                        </td>
-                        <td class="px-4 sm:px-6 py-4 text-right font-semibold">
-                            {{ batch.current_quantity }}
-                        </td>
-                        <td class="px-4 sm:px-6 py-4 text-center">
+                        <td>{{ batch.expiry_date|date:"d M Y" }}</td>
+                        <td>{{ batch.sell_by_date|date:"d M Y"|default:"—" }}</td>
+                        <td class="align-right cell-strong">{{ batch.current_quantity }}</td>
+                        <td>
                             {% if batch.status == 'expired' %}
-                                <span class="bg-red-600/20 text-red-400 border border-red-600/40 px-2.5 py-1 rounded-full text-xs font-medium">
-                                    Expired
-                                </span>
+                                <span class="badge badge-danger">Expired</span>
                             {% elif batch.is_near_expiry %}
-                                <span class="bg-amber-600/20 text-amber-400 border border-amber-600/40 px-2.5 py-1 rounded-full text-xs font-medium">
-                                    Near Expiry
-                                </span>
+                                <span class="badge badge-warning">Near Expiry</span>
                             {% else %}
-                                <span class="bg-emerald-600/20 text-emerald-400 border border-emerald-600/40 px-2.5 py-1 rounded-full text-xs font-medium">
-                                    Active
-                                </span>
+                                <span class="badge badge-success">Active</span>
                             {% endif %}
                         </td>
-                        <td class="px-4 sm:px-6 py-4 text-center">
-                            <div class="flex justify-center gap-3 text-sm">
-                                <a href="{% url 'inventory:batch_update' batch.pk %}" 
-                                   class="text-amber-400 hover:text-amber-300">✏️ Edit</a>
-                                
-                                <button 
-                                    type="button"
-                                    data-url="{% url 'inventory:batch_delete' batch.pk %}" 
-                                    data-name="Batch {{ batch.batch_number }} ({{ batch.product.name }})" 
-                                    @click="showDeleteModal = true; deleteUrl = $el.dataset.url; deleteName = $el.dataset.name" 
-                                    class="text-red-400 hover:text-red-300">
-                                    🗑️ Delete
-                                </button>
-                            </div>
+                        <td class="align-right" style="white-space: nowrap;">
+                            <a href="{% url 'inventory:batch_update' batch.pk %}" class="btn-secondary btn-sm">✏ Edit</a>
+                            <button type="button"
+                                    class="btn-danger btn-sm"
+                                    @click="deleteUrl = '{% url 'inventory:batch_delete' batch.pk %}'; deleteLabel = '{{ batch.batch_number|escapejs }}'; deleteModalOpen = true">
+                                🗑 Delete
+                            </button>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="9" class="px-6 py-16 text-center text-slate-400">
+                        <td colspan="8" style="text-align: center; padding: 2.5rem 1rem;">
                             {% if search_query %}
                                 No batches found for “{{ search_query }}”.
                             {% else %}
@@ -137,87 +102,48 @@
                 </tbody>
             </table>
         </div>
-    </div>
 
-    <!-- Pagination -->
-    {% if page_obj.has_other_pages %}
-    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
-        <p class="text-slate-400 text-sm">
-            Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-        </p>
-
-        <div class="flex items-center gap-2">
-            {% if page_obj.has_previous %}
-                <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}"
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    First
-                </a>
-                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    Previous
-                </a>
-            {% endif %}
-
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <span class="px-3.5 py-2 rounded-xl bg-teal-600 text-sm font-medium">{{ num }}</span>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                    <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}"
-                       class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                        {{ num }}
-                    </a>
+        {% if page_obj.has_other_pages %}
+        <nav class="erp-pagination" aria-label="Pagination">
+            <span>Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            <div class="erp-page-links">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1{% if search_query %}&q={{ search_query }}{% endif %}" class="btn-secondary btn-sm">First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn-secondary btn-sm">Previous</a>
                 {% endif %}
-            {% endfor %}
 
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    Next
-                </a>
-                <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}"
-                   class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
-                    Last
-                </a>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <span class="btn-primary btn-sm">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <a href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn-secondary btn-sm">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn-secondary btn-sm">Next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn-secondary btn-sm">Last</a>
+                {% endif %}
+            </div>
+        </nav>
+        {% endif %}
+    </section>
 
     <!-- Delete Confirmation Modal -->
-    <div 
-        x-show="showDeleteModal" 
-        x-cloak 
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-        @keydown.escape.window="showDeleteModal = false">
-        
-        <div 
-            @click.away="showDeleteModal = false" 
-            x-transition
-            class="bg-slate-800 border border-slate-700 p-8 rounded-3xl max-w-md w-full shadow-2xl">
-            
-            <h2 class="text-2xl font-bold text-white mb-4">Delete Batch?</h2>
-            <p class="text-slate-400 mb-8">
-                Are you sure you want to delete 
-                <span class="text-teal-400 font-bold" x-text="deleteName"></span>?<br><br>
+    <div class="erp-modal-backdrop" x-show="deleteModalOpen" x-cloak x-transition.opacity>
+        <div class="glass-card erp-modal" @click.outside="deleteModalOpen = false">
+            <p class="erp-eyebrow">Confirm deletion</p>
+            <h2 class="erp-title" style="font-size: 1.35rem;">Delete Batch?</h2>
+            <p class="erp-subtitle" style="margin-top: 0.6rem;">
+                Are you sure you want to delete <strong class="cell-strong" x-text="deleteLabel"></strong>?
                 This action cannot be undone.
             </p>
-            
-            <div class="flex gap-4">
-                <a :href="deleteUrl" 
-                   class="flex-1 bg-red-600 hover:bg-red-500 text-center py-3.5 rounded-2xl font-semibold transition-colors">
-                    Yes, Delete
-                </a>
-                <button @click="showDeleteModal = false" 
-                        class="flex-1 bg-slate-700 hover:bg-slate-600 py-3.5 rounded-2xl font-semibold transition-colors">
-                    Cancel
-                </button>
-            </div>
+            <form method="post" :action="deleteUrl" class="erp-actions" style="justify-content: flex-end; margin-top: 1.35rem;">
+                {% csrf_token %}
+                <button type="button" class="btn-secondary" @click="deleteModalOpen = false">Cancel</button>
+                <button type="submit" class="btn-danger">Yes, Delete</button>
+            </form>
         </div>
     </div>
-
 </div>
-
-<style>
-    [x-cloak] { display: none !important; }
-</style>
 {% endblock %}
