@@ -1,9 +1,19 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en"
+      x-data="{
+          theme: document.documentElement.dataset.theme || 'light',
+          viewMode: localStorage.getItem('viewMode') || 'auto'
+      }"
+      x-init="
+          $watch('theme', value => {
+              document.documentElement.dataset.theme = value;
+              localStorage.setItem('theme', value);
+          });
+      ">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Expiry ERP - Login{% endblock %}</title>
+    <title>{% block title %}REGON ExpiryERP{% endblock %}</title>
 
     <script>
         try {
@@ -15,158 +25,545 @@
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2"></script>
+    <script src="https://unpkg.com/alpinejs" defer></script>
 
     <style>
         :root {
             color-scheme: light;
-            --login-bg: #f1f4f8;
-            --login-text: #202b3b;
-            --login-muted: #687589;
-            --login-surface: rgba(250, 251, 253, 0.9);
-            --login-border: rgba(148, 163, 184, 0.22);
-            --login-shadow: 0 18px 48px rgba(31, 45, 66, 0.1);
-            --login-accent: #0d8278;
+            --page-bg: #f1f4f8;
+            --text: #202b3b;
+            --muted: #687589;
+            --surface: rgba(250, 251, 253, 0.88);
+            --surface-strong: rgba(250, 251, 253, 0.96);
+            --surface-soft: rgba(245, 247, 250, 0.92);
+            --border: rgba(148, 163, 184, 0.22);
+            --line: rgba(100, 116, 139, 0.16);
+            --shadow: 0 14px 36px rgba(31, 45, 66, 0.07);
+            --accent: #0d8278;
+            --accent-soft: rgba(20, 142, 130, 0.09);
         }
 
         [data-theme="dark"] {
             color-scheme: dark;
-            --login-bg: #101722;
-            --login-text: #e4eaf2;
-            --login-muted: #a0adbd;
-            --login-surface: rgba(27, 37, 52, 0.9);
-            --login-border: rgba(203, 218, 240, 0.12);
-            --login-shadow: 0 18px 48px rgba(0, 0, 0, 0.25);
-            --login-accent: #66d6c6;
+            --page-bg: #101722;
+            --text: #e4eaf2;
+            --muted: #a0adbd;
+            --surface: rgba(27, 37, 52, 0.88);
+            --surface-strong: rgba(24, 34, 49, 0.96);
+            --surface-soft: rgba(32, 43, 59, 0.92);
+            --border: rgba(203, 218, 240, 0.12);
+            --line: rgba(203, 218, 240, 0.11);
+            --shadow: 0 14px 36px rgba(0, 0, 0, 0.20);
+            --accent: #66d6c6;
+            --accent-soft: rgba(45, 180, 165, 0.10);
         }
 
         * {
             box-sizing: border-box;
         }
 
+        [x-cloak] {
+            display: none !important;
+        }
+
         html {
             min-height: 100%;
-            background: var(--login-bg);
+            background: var(--page-bg);
         }
 
         body {
             min-height: 100vh;
             margin: 0;
-            display: grid;
-            place-items: center;
-            padding: 2rem 1rem;
-            color: var(--login-text);
+            color: var(--text);
             background:
-                radial-gradient(ellipse at 12% 8%, rgba(45, 212, 191, 0.08), transparent 36%),
-                radial-gradient(ellipse at 88% 14%, rgba(99, 102, 241, 0.06), transparent 34%),
-                var(--login-bg);
+                radial-gradient(ellipse at 8% 4%, rgba(45, 212, 191, 0.07), transparent 34%),
+                radial-gradient(ellipse at 92% 10%, rgba(99, 102, 241, 0.06), transparent 32%),
+                var(--page-bg);
             font-family: Inter, ui-sans-serif, system-ui, -apple-system,
                          BlinkMacSystemFont, "Segoe UI", sans-serif;
             transition: background-color 180ms ease, color 180ms ease;
         }
 
-        .login-stage {
-            width: min(100%, 1100px);
-        }
-
-        /* Optional class for the login form/card in your child template. */
-        .login-glass {
-            border: 1px solid var(--login-border);
-            border-radius: 22px;
-            color: var(--login-text);
-            background: var(--login-surface);
-            box-shadow: var(--login-shadow);
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface-strong);
+            box-shadow: 0 6px 22px rgba(15, 23, 42, 0.04);
             backdrop-filter: blur(18px) saturate(135%);
             -webkit-backdrop-filter: blur(18px) saturate(135%);
         }
+
+        .topbar-inner {
+            width: min(100% - 2rem, 1440px);
+            min-height: 72px;
+            margin-inline: auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .nav-left,
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            min-width: 0;
+        }
+
+        .brand {
+            width: 44px;
+            height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 15px;
+            color: #fff;
+            background: linear-gradient(135deg, #e84968, #12a887);
+            box-shadow: 0 6px 16px rgba(13, 148, 136, 0.16);
+            font-size: 1rem;
+            font-weight: 900;
+            text-decoration: none;
+        }
+
+        .dropdown-wrap {
+            position: relative;
+        }
+
+        .menu-trigger,
+        .branch-trigger,
+        .theme-toggle,
+        .view-switch {
+            min-height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            color: var(--text);
+            background: var(--surface);
+            cursor: pointer;
+        }
+
+        .menu-trigger,
+        .branch-trigger {
+            padding: 0.35rem 0.55rem;
+        }
+
+        .menu-label,
+        .branch-label {
+            max-width: 140px;
+            overflow: hidden;
+            padding: 0.45rem 0.72rem;
+            border-radius: 9px;
+            color: #fff;
+            background: linear-gradient(135deg, #0f9288, #0f766e);
+            font-size: 0.77rem;
+            font-weight: 650;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .menu-chevron {
+            width: 15px;
+            height: 15px;
+            color: var(--muted);
+            transition: transform 160ms ease;
+        }
+
+        .menu-chevron.is-open {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-panel {
+            position: absolute;
+            top: calc(100% + 0.55rem);
+            left: 0;
+            z-index: 60;
+            width: 215px;
+            padding: 0.45rem;
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            background: var(--surface-strong);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .dropdown-panel.align-right {
+            right: 0;
+            left: auto;
+        }
+
+        .dropdown-heading {
+            padding: 0.5rem 0.65rem;
+            color: var(--muted);
+            font-size: 0.65rem;
+            font-weight: 750;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .dropdown-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding: 0.58rem 0.7rem;
+            border-radius: 9px;
+            color: var(--muted);
+            font-size: 0.82rem;
+            text-decoration: none;
+            transition: color 150ms ease, background 150ms ease;
+        }
+
+        .dropdown-link:hover {
+            color: var(--text);
+            background: var(--accent-soft);
+        }
+
+        .dropdown-link.is-active {
+            color: #fff;
+            background: linear-gradient(135deg, #0f9288, #0f766e);
+            font-weight: 650;
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            margin: 0.4rem 0;
+            background: var(--line);
+        }
+
+        .theme-menu-button {
+            width: 100%;
+            min-height: 42px;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.6rem 0.7rem;
+            border: 0;
+            border-radius: 9px;
+            color: var(--text);
+            background: transparent;
+            cursor: pointer;
+            font: inherit;
+            font-size: 0.82rem;
+            text-align: left;
+        }
+
+        .theme-menu-button:hover {
+            background: var(--accent-soft);
+        }
+
+        .theme-menu-button span:first-child {
+            width: 1.25rem;
+            color: var(--accent);
+            font-size: 1.05rem;
+            text-align: center;
+        }
+
+        .view-switch {
+            gap: 0.1rem;
+            padding: 0.22rem;
+        }
+
+        .view-switch button {
+            padding: 0.48rem 0.6rem;
+            border: 0;
+            border-radius: 8px;
+            color: var(--muted);
+            background: transparent;
+            cursor: pointer;
+            font-size: 0.72rem;
+        }
+
+        .view-switch button.is-selected {
+            color: #fff;
+            background: #0f9288;
+        }
+
+        .branch-trigger {
+            padding: 0.35rem 0.55rem;
+        }
+
+        .user-info {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .user-name {
+            color: var(--text);
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .user-role {
+            margin-top: 0.1rem;
+            color: var(--muted);
+            font-size: 0.68rem;
+            text-transform: capitalize;
+        }
+
+        .user-avatar {
+            width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            color: #fff;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            font-weight: 750;
+        }
+
+        .logout-button {
+            min-height: 40px;
+            padding: 0.5rem 0.85rem;
+            border: 0;
+            border-radius: 11px;
+            color: #fff;
+            background: linear-gradient(135deg, #e65360, #cf343f);
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-weight: 650;
+        }
+
+        .app-main {
+            width: min(100% - 2rem, 1440px);
+            margin-inline: auto;
+            padding-block: 2rem 3rem;
+        }
+
+        @media (max-width: 900px) {
+            .view-switch,
+            .user-info {
+                display: none;
+            }
+
+            .topbar-inner {
+                min-height: 66px;
+            }
+        }
+
+        @media (max-width: 620px) {
+            .topbar-inner {
+                width: min(100% - 1.25rem, 1440px);
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                padding-block: 0.5rem;
+            }
+
+            .nav-left,
+            .top-actions {
+                gap: 0.4rem;
+            }
+
+            .top-actions {
+                margin-left: auto;
+            }
+
+            .menu-label {
+                max-width: 105px;
+            }
+
+            .branch-label {
+                max-width: 95px;
+            }
+
+            .app-main {
+                width: min(100% - 1.25rem, 1440px);
+                padding-top: 1.25rem;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                scroll-behavior: auto !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+
+        /* === Shared ERP Page & Component System === */
+        .erp-page { display: grid; gap: 1.5rem; }
+        .erp-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+        .erp-eyebrow { margin: 0 0 0.4rem; color: var(--accent); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; }
+        .erp-title { margin: 0; color: var(--text); font-size: clamp(1.55rem, 3.2vw, 2.25rem); font-weight: 780; letter-spacing: -0.04em; line-height: 1.15; }
+        .erp-subtitle { margin: 0.45rem 0 0; color: var(--muted); font-size: 0.88rem; }
+        .erp-actions { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+
+        .glass-card {
+            position: relative; overflow: hidden;
+            border: 1px solid var(--border); border-radius: 22px;
+            background: var(--surface); box-shadow: var(--shadow);
+            backdrop-filter: blur(18px) saturate(145%); -webkit-backdrop-filter: blur(18px) saturate(145%);
+            padding: 1.4rem;
+        }
+        .glass-card::before {
+            position: absolute; inset: 0 0 auto; height: 1px; content: ""; pointer-events: none;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+        }
+        [data-theme="dark"] .glass-card::before {
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        }
+
+        /* Buttons */
+        .btn-primary, .btn-secondary, .btn-danger, .btn-ghost {
+            min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;
+            padding: 0.6rem 1rem; border-radius: 13px; font: inherit; font-size: 0.82rem; font-weight: 700;
+            text-decoration: none; cursor: pointer; transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+        }
+        .btn-primary {
+            border: 1px solid rgba(255, 255, 255, 0.28); color: #fff;
+            background: linear-gradient(135deg, #10a98f, #0f766e); box-shadow: 0 8px 20px rgba(13, 148, 136, 0.2);
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 24px rgba(13, 148, 136, 0.28); }
+        .btn-secondary { border: 1px solid var(--line); color: var(--text); background: var(--surface-strong); }
+        .btn-secondary:hover { background: var(--accent-soft); border-color: var(--accent); }
+        .btn-danger {
+            border: 1px solid rgba(255, 255, 255, 0.2); color: #fff;
+            background: linear-gradient(135deg, #e65360, #cf343f); box-shadow: 0 8px 20px rgba(207, 52, 63, 0.2);
+        }
+        .btn-danger:hover { transform: translateY(-1px); box-shadow: 0 12px 24px rgba(207, 52, 63, 0.28); }
+        .btn-sm { min-height: 32px; padding: 0.35rem 0.65rem; border-radius: 9px; font-size: 0.74rem; }
+
+        /* Search & Forms (targets Django-rendered widgets automatically) */
+        .erp-search-bar { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+        .erp-form-card { max-width: 680px; width: 100%; margin-inline: auto; }
+        .erp-confirm-card { max-width: 480px; width: 100%; margin: 2rem auto; text-align: center; }
+        .erp-form-grid { display: grid; gap: 1.15rem; }
+        .erp-field { display: grid; gap: 0.4rem; }
+        .erp-field label { color: var(--text); font-size: 0.78rem; font-weight: 700; }
+        .erp-field input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+        .erp-field select,
+        .erp-field textarea,
+        .erp-input {
+            width: 100%; min-height: 44px; padding: 0.6rem 0.85rem;
+            border: 1px solid var(--line); border-radius: 12px;
+            color: var(--text); background: var(--surface-strong);
+            font: inherit; font-size: 0.85rem; transition: border-color 150ms ease, box-shadow 150ms ease;
+        }
+        .erp-field input[type="file"] { padding: 0.5rem 0.75rem; cursor: pointer; }
+        .erp-field input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+        .erp-field input:focus, .erp-field select:focus, .erp-field textarea:focus, .erp-input:focus {
+            outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+        .erp-help { color: var(--muted); font-size: 0.74rem; margin: 0; }
+        .erp-error { color: #dc2626; font-size: 0.75rem; font-weight: 650; margin: 0; }
+        [data-theme="dark"] .erp-error { color: #fca5a5; }
+        .erp-alert-box {
+            padding: 0.85rem 1rem; border: 1px solid rgba(239, 68, 68, 0.25); border-left: 3px solid #ef4444;
+            border-radius: 12px; background: rgba(239, 68, 68, 0.08); color: #dc2626; font-size: 0.82rem;
+        }
+        [data-theme="dark"] .erp-alert-box { color: #fca5a5; }
+
+        /* Tables & Badges */
+        .table-scroll { max-height: 600px; overflow: auto; border: 1px solid var(--line); border-radius: 14px; }
+        .data-table { width: 100%; min-width: 680px; border-collapse: separate; border-spacing: 0; color: var(--text); font-size: 0.8rem; text-align: left; }
+        .data-table th {
+            position: sticky; top: 0; z-index: 1; padding: 0.85rem 0.85rem; border-bottom: 1px solid var(--line);
+            color: var(--muted); background: var(--surface-strong); font-size: 0.68rem; font-weight: 800;
+            letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap;
+        }
+        .data-table td { padding: 0.85rem; border-bottom: 1px solid var(--line); color: var(--muted); vertical-align: middle; }
+        .data-table tbody tr:last-child td { border-bottom: 0; }
+        .data-table tbody tr:hover { background: var(--accent-soft); }
+        .mono-code { color: var(--accent); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.76rem; font-weight: 650; }
+        .cell-strong { color: var(--text); font-weight: 650; }
+        .align-right { text-align: right; }
+
+        .badge {
+            display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.6rem;
+            border-radius: 999px; font-size: 0.7rem; font-weight: 750; white-space: nowrap;
+        }
+        .badge-success { background: rgba(16, 185, 129, 0.14); color: #059669; }
+        .badge-warning { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+        .badge-danger  { background: rgba(239, 68, 68, 0.14); color: #dc2626; }
+        .badge-neutral { background: rgba(100, 116, 139, 0.14); color: var(--muted); }
+        [data-theme="dark"] .badge-success { color: #6ee7b7; }
+        [data-theme="dark"] .badge-warning { color: #fcd34d; }
+        [data-theme="dark"] .badge-danger  { color: #fca5a5; }
+
+        /* Pagination & Modal */
+        .erp-pagination { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; font-size: 0.8rem; color: var(--muted); }
+        .erp-page-links { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+        .erp-modal-backdrop {
+            position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 1rem;
+            background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(6px);
+        }
+        .erp-modal { max-width: 440px; width: 100%; }
 
         .login-theme-toggle {
             position: fixed;
             top: 1rem;
             right: 1rem;
-            z-index: 10;
-            min-height: 42px;
+            left: auto;
+            z-index: 50;
+            min-height: 40px;
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.55rem 0.8rem;
-            border: 1px solid var(--login-border);
+            justify-content: center;
+            gap: 0.45rem;
+            padding: 0.5rem 0.8rem;
+            border: 1px solid var(--line);
             border-radius: 12px;
-            color: var(--login-text);
-            background: var(--login-surface);
-            box-shadow: 0 5px 18px rgba(31, 45, 66, 0.06);
+            color: var(--text);
+            background: var(--surface-strong);
+            box-shadow: var(--shadow);
             cursor: pointer;
             font: inherit;
             font-size: 0.8rem;
             font-weight: 650;
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            transition: background 150ms ease, border-color 150ms ease;
         }
 
         .login-theme-toggle:hover {
-            border-color: var(--login-accent);
+            border-color: var(--accent);
+            background: var(--accent-soft);
         }
 
         .login-theme-icon {
-            color: var(--login-accent);
+            color: var(--accent);
             font-size: 1.05rem;
+            line-height: 1;
         }
-
-        @media (max-width: 480px) {
-            body {
-                padding: 1.25rem 0.85rem;
-            }
-
+        @media (max-width: 620px) {
             .login-theme-toggle {
                 top: 0.75rem;
                 right: 0.75rem;
+                left: auto;
             }
-        }
-    </style>
+
+
+    </style
 </head>
 
 <body>
     <button type="button"
             class="login-theme-toggle"
-            id="loginThemeToggle"
-            aria-label="Toggle color theme">
-        <span class="login-theme-icon" id="loginThemeIcon" aria-hidden="true">☾</span>
-        <span id="loginThemeLabel">Dark mode</span>
+            @click="theme = theme === 'light' ? 'dark' : 'light'"
+            :aria-label="theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'">
+        <span class="login-theme-icon" aria-hidden="true" x-text="theme === 'light' ? '☾' : '☀'">☾</span>
+        <span x-text="theme === 'light' ? 'Dark mode' : 'Light mode'">Dark mode</span>
     </button>
 
-    <main class="login-stage">
+    <main class="app-main">
         {% block content %}{% endblock %}
     </main>
 
-    <script>
-        (function () {
-            const root = document.documentElement;
-            const button = document.getElementById('loginThemeToggle');
-            const icon = document.getElementById('loginThemeIcon');
-            const label = document.getElementById('loginThemeLabel');
-
-            function updateThemeButton() {
-                const isDark = root.dataset.theme === 'dark';
-                icon.textContent = isDark ? '☀' : '☾';
-                label.textContent = isDark ? 'Light mode' : 'Dark mode';
-            }
-
-            updateThemeButton();
-
-            button.addEventListener('click', function () {
-                const nextTheme =
-                    root.dataset.theme === 'dark' ? 'light' : 'dark';
-
-                root.dataset.theme = nextTheme;
-
-                try {
-                    localStorage.setItem('theme', nextTheme);
-                } catch (error) {
-                    // Theme still works for the current page if storage is unavailable.
-                }
-
-                updateThemeButton();
-            });
-        })();
-    </script>
+    {% block extra_js %}{% endblock %}
 </body>
+
 </html>
