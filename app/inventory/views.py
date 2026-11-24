@@ -3,7 +3,7 @@ from django import forms
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Q
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from .models import Category, Product, Batch, StockMovement, Branch
 from django.core.exceptions import PermissionDenied
 from core.models import CustomUser
@@ -21,7 +21,7 @@ from import_export import resources
 from .models import BatchResource
 from .forms import BulkBatchUploadForm
 from tablib import Dataset
-# Create your views here.
+from decimal import Decimal, InvalidOperation
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from .utils import (
@@ -84,13 +84,15 @@ def dashboard(request):
     expiring_soon = near_expiry_qs.select_related("product").order_by("expiry_date")[:15]
     expired_batches = expired_qs.select_related("product").order_by("expiry_date")[:15]
 
+    branch_notifications = Notification.objects.filter(
+        user=request.user,
+        is_read=False,
+        batch__product__branch=branch,
+    ).select_related("batch", "batch__product")
+
     notifications = []
     if getattr(request.user, "role", None) in ("superuser", "manager") or request.user.is_superuser:
-        notifications = Notification.objects.filter(
-            user=request.user, is_read=False
-        )[:10]
-        # Optional stricter: only alerts for this branch's batches
-        # notifications = notifications.filter(batch__product__branch=branch)
+        notifications = branch_notifications[:10]
 
     context = {
         "total_products": total_products,
@@ -100,81 +102,74 @@ def dashboard(request):
         "expiring_soon": expiring_soon,
         "expired_batches": expired_batches,
         "notifications": notifications,
-        "unread_count": Notification.objects.filter(
-            user=request.user, is_read=False
-        ).count(),
+        "unread_count": branch_notifications.count(),
         "today": today,
     }
     return render(request, "inventory/dashboard.html", context)
 
+
 @login_required
 def expiring_soon_view(request):
-    """Full page: only batches that are still valid and near expiry"""
+    """Full page: batches in the active branch that are still valid and near expiry"""
     today = date.today()
+    branch = require_active_branch(request)
 
     expiring_soon = Batch.objects.filter(
-        status='active',
+        product__branch=branch,
+        status="active",
         expiry_date__gte=today,
-        expiry_date__lte=today + timedelta(days=90)
-    ).select_related('product').order_by('expiry_date')
+        expiry_date__lte=today + timedelta(days=90),
+    ).select_related("product").order_by("expiry_date")
 
-    # Search
-    search_query = request.GET.get('search', '').strip()
+    search_query = (request.GET.get("q") or request.GET.get("search") or "").strip()
     if search_query:
         expiring_soon = expiring_soon.filter(
-            Q(batch_number__icontains=search_query) |
-            Q(product__name__icontains=search_query) |
-            Q(product__icode__icontains=search_query)
+            Q(batch_number__icontains=search_query)
+            | Q(product__name__icontains=search_query)
+            | Q(product__icode__icontains=search_query)
         )
 
-
-
-    # Optional pagination
     paginator = Paginator(expiring_soon, 10)
-    page_number = request.GET.get('page', 1)
-    page_obj = paginator.get_page(page_number)
+    page_obj = paginator.get_page(request.GET.get("page", 1))
 
-    context = {
-        'expiring_soon': page_obj,
-        'page_obj': page_obj,
-        'search_query': search_query,
-        'total_count': expiring_soon.count(),
-    }
-    return render(request, 'inventory/expirysoon.html', context)
+    return render(request, "inventory/expirysoon.html", {
+        "expiring_soon": page_obj,
+        "page_obj": page_obj,
+        "search_query": search_query,
+        "total_count": expiring_soon.count(),
+    })
 
 
 @login_required
 def expired_batches_view(request):
-    """Full page: only already expired batches"""
+    """Full page: already expired batches in the active branch"""
     today = date.today()
+    branch = require_active_branch(request)
 
     expired_batches = Batch.objects.filter(
-        Q(status='expired') | Q(expiry_date__lt=today)
-    ).select_related('product').order_by('expiry_date')
+        product__branch=branch
+    ).filter(
+        Q(status="expired") | Q(expiry_date__lt=today)
+    ).select_related("product").order_by("expiry_date")
 
-     # Search
-    search_query = request.GET.get('search', '').strip()
+    search_query = (request.GET.get("q") or request.GET.get("search") or "").strip()
     if search_query:
         expired_batches = expired_batches.filter(
-            Q(batch_number__icontains=search_query) |
-            Q(product__name__icontains=search_query) |
-            Q(product__icode__icontains=search_query)
+            Q(batch_number__icontains=search_query)
+            | Q(product__name__icontains=search_query)
+            | Q(product__icode__icontains=search_query)
         )
 
-
-
-    # Optional pagination
     paginator = Paginator(expired_batches, 10)
-    page_number = request.GET.get('page', 1)
-    page_obj = paginator.get_page(page_number)
+    page_obj = paginator.get_page(request.GET.get("page", 1))
 
-    context = {
-        'expired_batches': page_obj,
-        'page_obj': page_obj,
-        'search_query': search_query,
-        'total_count': expired_batches.count(),
-    }
-    return render(request, 'inventory/expiredbatch.html', context)
+    return render(request, "inventory/expiredbatch.html", {
+        "expired_batches": page_obj,
+        "page_obj": page_obj,
+        "search_query": search_query,
+        "total_count": expired_batches.count(),
+    })
+
 
 @login_required
 def product_list(request):
@@ -414,117 +409,314 @@ def batch_create(request, product_icode=None):
         "product": product,
     })
 
-from django import forms
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404, redirect, render
+
 
 @login_required
 def batch_update(request, pk):
-    batch = get_object_or_404(Batch, pk=pk)
+    branch = require_active_branch(request)
+    batch = get_object_or_404(Batch, pk=pk, product__branch=branch)
     product = batch.product
 
-    if request.method == 'POST':
+    if request.method == "POST":
         form = BatchForm(request.POST, instance=batch)
     else:
         form = BatchForm(instance=batch)
 
-    # 1. Lock product on edit so Django automatically keeps `batch.product`
-    if 'product' in form.fields:
-        form.fields['product'].disabled = True
-        form.fields['product'].required = False
+    if "product" in form.fields:
+        form.fields["product"].disabled = True
+        form.fields["product"].required = False
 
-    # 2. Ensure existing dates render in ISO format (YYYY-MM-DD) for <input type="date">
     for field in form.fields.values():
         if isinstance(field, forms.DateField):
-            field.widget.format = '%Y-%m-%d'
-            if getattr(field.widget, 'input_type', None) != 'date':
-                field.widget.input_type = 'date'
+            field.widget.format = "%Y-%m-%d"
+            if getattr(field.widget, "input_type", None) != "date":
+                field.widget.input_type = "date"
 
-    if request.method == 'POST':
+    if request.method == "POST":
         if form.is_valid():
             updated_batch = form.save(commit=False)
-            updated_batch.product = product  # Guaranteed to stay linked
+            updated_batch.product = product
             updated_batch.save()
-
             messages.success(request, f"Batch {updated_batch.batch_number} updated successfully!")
-            return redirect('inventory:product_detail', icode=product.icode)
-        else:
-            messages.error(request, "Please correct the errors below.")
+            return redirect("inventory:product_detail", icode=product.icode)
+        messages.error(request, "Please correct the errors below.")
 
-    return render(request, 'inventory/batch_form.html', {
-        'form': form,
-        'batch': batch,
-        'product': product,
-        'title': 'Edit Batch',
+    return render(request, "inventory/batch_form.html", {
+        "form": form,
+        "batch": batch,
+        "product": product,
+        "title": "Edit Batch",
     })
 
 
 @login_required
 def batch_delete(request, pk):
-    batch = get_object_or_404(Batch, pk=pk)
-    product_icode = batch.product.icode
-    if request.method == 'POST':
+    branch = require_active_branch(request)
+    batch = get_object_or_404(Batch, pk=pk, product__branch=branch)
+
+    if request.method == "POST":
+        batch_num = batch.batch_number
         batch.delete()
-        messages.success(request, "Batch deleted successfully!")
-        return redirect('inventory:product_detail', icode=product_icode)
-    return render(request, 'inventory/batch_confirm_delete.html', {'batch': batch})
+        messages.success(request, f"Batch {batch_num} deleted.")
+        return redirect("inventory:batch_list")
+
+    return render(request, "inventory/batch_confirm_delete.html", {"batch": batch})
+
+
 
 # ===================== BULK PRODUCT UPLOAD =====================
+
+def _parse_excel_date(value):
+    """Safely convert Excel cell values (date, datetime, or YYYY-MM-DD string) to a Python date."""
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        cleaned = value.strip()
+        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"):
+            try:
+                return datetime.strptime(cleaned, fmt).date()
+            except ValueError:
+                continue
+    raise ValueError(f"Invalid date format: '{value}'. Expected YYYY-MM-DD.")
+
 @login_required
 def bulk_product_upload(request):
-    if request.method == 'POST':
+    """Import products from Excel strictly into the user's active branch."""
+    branch = require_active_branch(request)
+
+    if request.method == "POST":
         form = BulkProductUploadForm(request.POST, request.FILES)
         if form.is_valid():
-            excel_file = request.FILES['excel_file']
-            
+            uploaded_file = next(iter(request.FILES.values()))
             try:
-                wb = openpyxl.load_workbook(excel_file)
-                sheet = wb.active
-                
-                success_count = 0
-                error_count = 0
-                
-                # Skip header row (row 1)
-                for row in sheet.iter_rows(min_row=2, values_only=True):
-                    try:
-                        name, scode, category_name, uom, selling_price, cost_price, reorder_level = row[:7]
-                        
-                        # Get or create category
+                wb = openpyxl.load_workbook(uploaded_file, data_only=True)
+                ws = wb.active
+
+                rows = list(ws.iter_rows(values_only=True))
+                if not rows:
+                    messages.error(request, "The uploaded spreadsheet is empty.")
+                    return redirect("inventory:bulk_product_upload")
+
+                expected_headers = [
+                    "Name", "Scode", "Category", "UoM",
+                    "Selling Price", "Cost Price", "Reorder Level"
+                ]
+                actual_headers = [str(cell).strip() if cell is not None else "" for cell in rows[0][:7]]
+
+                if actual_headers != expected_headers:
+                    messages.error(
+                        request,
+                        f"Invalid column headers. Expected: {', '.join(expected_headers)}"
+                    )
+                    return redirect("inventory:bulk_product_upload")
+
+                created_count = 0
+                updated_count = 0
+                row_errors = []
+
+                with transaction.atomic():
+                    for row_idx, row in enumerate(rows[1:], start=2):
+                        if not any(row[:7]):
+                            continue
+
+                        name, scode, cat_name, uom, selling_price, cost_price, reorder_level = row[:7]
+
+                        if not name:
+                            row_errors.append(f"Row {row_idx}: Product 'Name' is required.")
+                            continue
+
+                        name = str(name).strip()
+                        scode = str(scode).strip() if scode not in (None, "") else ""
+                        uom = str(uom).strip() if uom not in (None, "") else "pcs"
+
                         category = None
-                        if category_name:
-                            category, _ = Category.objects.get_or_create(name=category_name)
-                        
-                        # Get default branch
-                        branch = Branch.objects.first()
-                        
-                        Product.objects.create(
-                            name=name,
-                            scode=scode or "",
-                            category=category,
-                            uom=uom or "pcs",
-                            selling_price=selling_price or 0,
-                            cost_price=cost_price or 0,
-                            reorder_level=reorder_level or 10,
-                            branch=branch
-                        )
-                        success_count += 1
-                        
-                    except Exception as e:
-                        error_count += 1
-                        print(f"Error processing row: {e}")
-                
-                messages.success(request, f"Successfully imported {success_count} products. Errors: {error_count}")
-                return redirect('inventory:product_list')
-                
+                        if cat_name not in (None, ""):
+                            category, _ = Category.objects.get_or_create(
+                                name=str(cat_name).strip()
+                            )
+
+                        try:
+                            selling_dec = Decimal(str(selling_price or 0))
+                            cost_dec = Decimal(str(cost_price or 0))
+                            reorder_int = int(float(reorder_level or 0))
+                        except (InvalidOperation, ValueError):
+                            row_errors.append(
+                                f"Row {row_idx} ({name}): Invalid numeric value in price or reorder level."
+                            )
+                            continue
+
+                        defaults = {
+                            "name": name,
+                            "category": category,
+                            "uom": uom,
+                            "selling_price": selling_dec,
+                            "cost_price": cost_dec,
+                            "reorder_level": reorder_int,
+                        }
+
+                        if scode:
+                            _, created = Product.objects.update_or_create(
+                                branch=branch,
+                                scode=scode,
+                                defaults=defaults,
+                            )
+                            if created:
+                                created_count += 1
+                            else:
+                                updated_count += 1
+                        else:
+                            Product.objects.create(branch=branch, scode="", **defaults)
+                            created_count += 1
+
+                if row_errors:
+                    for err in row_errors[:5]:
+                        messages.warning(request, err)
+
+                messages.success(
+                    request,
+                    f"Bulk product upload for {branch.name} complete: {created_count} created, {updated_count} updated."
+                )
+                return redirect("inventory:product_list")
+
             except Exception as e:
                 messages.error(request, f"Failed to process Excel file: {str(e)}")
     else:
         form = BulkProductUploadForm()
-    
-    return render(request, 'inventory/bulk_product_upload.html', {'form': form})
+
+    return render(request, "inventory/bulk_product_upload.html", {
+        "form": form,
+        "title": "Bulk Product Upload",
+    })
 
 # ===================== BULK BATCH UPLOAD =====================
+
+@login_required
+def bulk_batch_upload(request):
+    """Import batches from Excel, ensuring every product_icode belongs to the active branch."""
+    branch = require_active_branch(request)
+
+    if request.method == "POST":
+        form = BulkBatchUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            uploaded_file = next(iter(request.FILES.values()))
+            try:
+                wb = openpyxl.load_workbook(uploaded_file, data_only=True)
+                ws = wb.active
+
+                rows = list(ws.iter_rows(values_only=True))
+                if not rows:
+                    messages.error(request, "The uploaded spreadsheet is empty.")
+                    return redirect("inventory:bulk_batch_upload")
+
+                expected_headers = [
+                    "product_icode", "batch_number", "manufacturing_date",
+                    "sell_by_date", "salvage_date", "expiry_date",
+                    "current_quantity", "supplier_batch_ref",
+                ]
+                actual_headers = [
+                    str(cell).strip() if cell is not None else ""
+                    for cell in rows[0][:8]
+                ]
+
+                if actual_headers != expected_headers:
+                    messages.error(
+                        request,
+                        f"Invalid column headers. Expected: {', '.join(expected_headers)}",
+                    )
+                    return redirect("inventory:bulk_batch_upload")
+
+                # Only allow products that belong to the user's active branch
+                branch_products = {
+                    p.icode.strip().lower(): p
+                    for p in Product.objects.filter(branch=branch)
+                }
+
+                created_count = 0
+                updated_count = 0
+                row_errors = []
+
+                with transaction.atomic():
+                    for row_idx, row in enumerate(rows[1:], start=2):
+                        if not any(row[:8]):
+                            continue
+
+                        (
+                            product_icode, batch_number, mfg_date,
+                            sell_by_date, salvage_date, expiry_date,
+                            current_qty, supplier_ref,
+                        ) = row[:8]
+
+                        if not product_icode or not batch_number or not expiry_date:
+                            row_errors.append(
+                                f"Row {row_idx}: 'product_icode', 'batch_number', and 'expiry_date' are required."
+                            )
+                            continue
+
+                        icode_key = str(product_icode).strip().lower()
+                        product = branch_products.get(icode_key)
+                        if not product:
+                            row_errors.append(
+                                f"Row {row_idx}: Product '{product_icode}' was not found in branch '{branch.name}'."
+                            )
+                            continue
+
+                        try:
+                            parsed_mfg = _parse_excel_date(mfg_date)
+                            parsed_sell_by = _parse_excel_date(sell_by_date)
+                            parsed_salvage = _parse_excel_date(salvage_date)
+                            parsed_expiry = _parse_excel_date(expiry_date)
+                            qty_val = int(float(current_qty or 0))
+                        except ValueError as ve:
+                            row_errors.append(f"Row {row_idx}: {ve}")
+                            continue
+
+                        batch_num_clean = str(batch_number).strip()
+                        supplier_ref_clean = (
+                            str(supplier_ref).strip() if supplier_ref not in (None, "") else ""
+                        )
+
+                        _, created = Batch.objects.update_or_create(
+                            product=product,
+                            batch_number=batch_num_clean,
+                            defaults={
+                                "manufacturing_date": parsed_mfg,
+                                "sell_by_date": parsed_sell_by,
+                                "salvage_date": parsed_salvage,
+                                "expiry_date": parsed_expiry,
+                                "current_quantity": qty_val,
+                                "supplier_batch_ref": supplier_ref_clean,
+                                "status": "expired" if parsed_expiry < date.today() else "active",
+                            },
+                        )
+                        if created:
+                            created_count += 1
+                        else:
+                            updated_count += 1
+
+                if row_errors:
+                    for err in row_errors[:5]:
+                        messages.warning(request, err)
+
+                messages.success(
+                    request,
+                    f"Bulk batch upload for {branch.name} complete: {created_count} created, {updated_count} updated.",
+                )
+                return redirect("inventory:batch_list")
+
+            except Exception as e:
+                messages.error(request, f"Failed to process Excel file: {str(e)}")
+    else:
+        form = BulkBatchUploadForm()
+
+    return render(request, "inventory/bulk_batch_upload.html", {
+        "form": form,
+        "title": "Bulk Batch Upload",
+    })
+
 
 
 @login_required
@@ -575,22 +767,21 @@ def bulk_batch_upload(request):
 # ===================== MANUAL EXPIRY CHECK =====================
 @login_required
 def run_expiry_check(request):
-    """Manually trigger the expiry check task"""
+    """Manually trigger the expiry check task for the active branch only"""
     if request.method == 'POST':
         try:
-            # Run the task immediately (no Celery needed)
-            result = check_expiry_alerts()
-            
+            branch = require_active_branch(request)
+            result = check_expiry_alerts(branch_id=branch.id)
+
             messages.success(
-                request, 
-                f"Expiry check completed! {result}"
+                request,
+                f"Expiry check completed for {branch.name}! {result}"
             )
         except Exception as e:
             messages.error(request, f"Error running expiry check: {str(e)}")
-        
-        return redirect('inventory:dashboard')
-    
+
     return redirect('inventory:dashboard')
+
 
 # ===================== BRANCH CRUD  =====================
 

@@ -3,99 +3,93 @@
 {% block title %}Barcode / QR Scanner · REGON ExpiryERP{% endblock %}
 
 {% block content %}
-<div class="erp-page" x-data="fullPageScanner()" x-init="initScanner()">
+<div class="erp-page">
+    <!-- Header -->
     <header class="erp-header" style="max-width: 960px; width: 100%; margin-inline: auto;">
         <div>
             <p class="erp-eyebrow">Quick lookup</p>
             <h1 class="erp-title">Barcode / QR Scanner</h1>
-            <p class="erp-subtitle">Point your camera at a barcode or type the code manually below.</p>
+            <p class="erp-subtitle">
+                Point your camera at a barcode or type the code manually below.
+            </p>
         </div>
 
         <div class="erp-actions">
-            <button type="button"
-                    x-show="cameras.length > 1"
-                    x-cloak
-                    @click="switchCamera()"
-                    class="btn-secondary">
-                🔄 Switch Camera
-            </button>
-            <a href="{% url 'inventory:dashboard' %}" class="btn-secondary">← Dashboard</a>
+            <a href="{% url 'inventory:dashboard' %}" class="btn-secondary">
+                ← Dashboard
+            </a>
         </div>
     </header>
 
     <div style="max-width: 960px; width: 100%; margin-inline: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem; align-items: start;">
-        <!-- Camera Viewport Card -->
+        <!-- Scanner Viewport -->
         <article class="glass-card" style="display: grid; gap: 1rem;">
-            <div id="qr-reader"
-                 style="width: 100%; min-height: 270px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--surface-strong);">
+            <div id="reader"
+                 style="width: 100%; max-width: 400px; aspect-ratio: 1 / 1; margin-inline: auto; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); background: var(--surface-strong);">
             </div>
 
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
-                <p class="erp-help" style="margin: 0;" x-text="cameraStatus"></p>
-                <span x-show="activeCameraLabel"
-                      x-cloak
-                      class="badge badge-neutral"
-                      x-text="activeCameraLabel">
-                </span>
-            </div>
+            <p id="scanner-status" class="erp-help" style="text-align: center; margin: 0;">
+                Starting camera...
+            </p>
 
-            <!-- Scanned Result Banner -->
-            <div x-show="scannedCode"
-                 x-cloak
+            <!-- Result Area -->
+            <div id="result"
+                 class="hidden"
                  style="padding: 1rem; border: 1px solid rgba(16, 185, 129, 0.35); border-left: 3px solid #10b981; border-radius: 14px; background: rgba(16, 185, 129, 0.09); display: grid; gap: 0.75rem;">
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                <div>
                     <span class="badge badge-success">Scanned Successfully</span>
-                    <span class="mono-code" x-text="scannedCode"></span>
+                    <div id="scanned-code"
+                         class="mono-code"
+                         style="margin-top: 0.55rem; padding: 0.65rem 0.8rem; border-radius: 10px; background: var(--surface-strong); border: 1px solid var(--line); word-break: break-all;">
+                    </div>
                 </div>
 
                 <div class="erp-actions">
-                    <button type="button" class="btn-secondary btn-sm" @click="resetScan()">Scan Another</button>
-                    <a :href="`{% url 'inventory:product_list' %}?q=${encodeURIComponent(scannedCode)}`"
-                       class="btn-primary btn-sm">
-                        Search Product
-                    </a>
-                    <a :href="`{% url 'inventory:batch_list' %}?q=${encodeURIComponent(scannedCode)}`"
-                       class="btn-secondary btn-sm">
+                    <button type="button" onclick="resetScanner()" class="btn-secondary btn-sm" style="flex: 1;">
+                        Scan Another
+                    </button>
+                    <button type="button" id="search-btn" class="btn-primary btn-sm" style="flex: 1;">
                         Search Batch
-                    </a>
+                    </button>
                 </div>
             </div>
         </article>
 
-        <!-- Manual Entry & Tips -->
+        <!-- Manual Entry & Instructions -->
         <div style="display: grid; gap: 1.25rem;">
             <article class="glass-card" style="display: grid; gap: 1rem;">
                 <div>
                     <h2 style="margin: 0; font-size: 1.05rem; font-weight: 750; color: var(--text);">
-                        ⌨ Manual Code Entry
+                        ⌨️ Manual Code Entry
                     </h2>
                     <p class="erp-subtitle" style="font-size: 0.82rem;">
                         If the camera cannot read the barcode clearly, type the code manually.
                     </p>
                 </div>
 
-                <form @submit.prevent="handleCode(manualCode)" class="erp-form-grid">
+                <form id="manualCodeForm" onsubmit="handleManualSubmit(event)" class="erp-form-grid">
                     <div class="erp-field">
-                        <label for="manual-barcode">Barcode / S-Code / Batch Number</label>
-                        <input id="manual-barcode"
-                               type="text"
-                               x-model="manualCode"
-                               class="erp-input"
-                               placeholder="Enter code..."
+                        <label for="manualCodeInput">Barcode / S-Code / Batch Number</label>
+                        <input type="text"
+                               id="manualCodeInput"
+                               placeholder="e.g. 615110001234 or B-102"
+                               class="erp-input mono-code"
                                required>
                     </div>
-                    <button type="submit" class="btn-primary">Submit Code</button>
+                    <button type="submit" class="btn-primary">
+                        Submit Code
+                    </button>
                 </form>
             </article>
 
             <article class="glass-card" style="background: var(--surface-soft);">
                 <h3 style="margin: 0 0 0.55rem; font-size: 0.92rem; font-weight: 750; color: var(--text);">
-                    ℹ Tips for best results
+                    ℹ️ Tips for best results
                 </h3>
                 <ul style="margin: 0; padding-left: 1.15rem; color: var(--muted); font-size: 0.8rem; line-height: 1.65;">
                     <li>Use <strong class="cell-strong">HTTPS</strong> or <strong class="cell-strong">localhost</strong> (camera will not work on plain HTTP).</li>
                     <li>Hold the barcode steady and fill most of the scanning square.</li>
-                    <li>Use <strong class="cell-strong">Switch Camera</strong> if your device defaults to the front selfie camera.</li>
+                    <li>Allow camera permission when the browser asks.</li>
                 </ul>
             </article>
         </div>
@@ -104,8 +98,19 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://unpkg.com" defer></script>
+<!-- Load the real scanner library synchronously before init -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
 <script>
+    let html5QrCode = null;
+    let lastScannedCode = "";
+
+    const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0
+    };
+
     function triggerScanFeedback() {
         if (navigator.vibrate) {
             navigator.vibrate(100);
@@ -116,7 +121,7 @@
             const ctx = new AudioCtx();
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
-            osc.type = 'sine';
+            osc.type = "sine";
             osc.frequency.setValueAtTime(880, ctx.currentTime);
             gain.gain.setValueAtTime(0.12, ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
@@ -127,103 +132,104 @@
         } catch (e) {}
     }
 
-    function fullPageScanner() {
-        return {
-            scannedCode: '',
-            cameraStatus: 'Starting camera...',
-            manualCode: '',
-            html5Qr: null,
-            cameras: [],
-            currentCameraIndex: 0,
-            lastScannedAt: 0,
-
-            get activeCameraLabel() {
-                return this.cameras[this.currentCameraIndex]?.label || '';
-            },
-
-            handleCode(code, fromCamera = false) {
-                const trimmed = (code || '').trim();
-                if (!trimmed) return;
-
-                // Debounce duplicate consecutive camera reads within 1.5s
-                const now = Date.now();
-                if (fromCamera && trimmed === this.scannedCode && now - this.lastScannedAt < 1500) {
-                    return;
-                }
-
-                this.lastScannedAt = now;
-                this.scannedCode = trimmed;
-                triggerScanFeedback();
-            },
-
-            resetScan() {
-                this.scannedCode = '';
-                this.manualCode = '';
-                this.lastScannedAt = 0;
-            },
-
-            async startStream() {
-                if (this.html5Qr && this.html5Qr.isScanning) {
-                    await this.html5Qr.stop();
-                    this.html5Qr.clear();
-                }
-
-                this.html5Qr = new Html5Qrcode('qr-reader');
-                const cameraConfig = this.cameras.length > 0
-                    ? this.cameras[this.currentCameraIndex].id
-                    : { facingMode: 'environment' };
-
-                await this.html5Qr.start(
-                    cameraConfig,
-                    { fps: 10, qrbox: { width: 230, height: 150 } },
-                    (decodedText) => this.handleCode(decodedText, true),
-                    () => {}
-                );
-                this.cameraStatus = 'Camera active — align barcode inside the frame.';
-            },
-
-            async initScanner() {
-                // Wait briefly if deferred html5-qrcode script is still executing
-                if (typeof Html5Qrcode === 'undefined') {
-                    await new Promise(resolve => window.addEventListener('load', resolve, { once: true }));
-                }
-                if (typeof Html5Qrcode === 'undefined') {
-                    this.cameraStatus = 'Scanner library failed to load. Use manual entry.';
-                    return;
-                }
-
-                try {
-                    const devices = await Html5Qrcode.getCameras();
-                    if (devices && devices.length > 0) {
-                        this.cameras = devices;
-                        const backIdx = devices.findIndex(d =>
-                            /back|rear|environment/i.test(d.label)
-                        );
-                        this.currentCameraIndex = backIdx !== -1 ? backIdx : 0;
-                    }
-                    await this.startStream();
-                } catch (err) {
-                    this.cameraStatus = 'Camera unavailable. Use manual code entry on the right.';
-                }
-
-                window.addEventListener('beforeunload', () => {
-                    if (this.html5Qr && this.html5Qr.isScanning) {
-                        this.html5Qr.stop().catch(() => {});
-                    }
-                });
-            },
-
-            async switchCamera() {
-                if (this.cameras.length < 2) return;
-                this.currentCameraIndex = (this.currentCameraIndex + 1) % this.cameras.length;
-                this.cameraStatus = 'Switching camera...';
-                try {
-                    await this.startStream();
-                } catch (err) {
-                    this.cameraStatus = 'Unable to switch camera.';
-                }
-            }
-        };
+    function updateStatus(message) {
+        const statusEl = document.getElementById("scanner-status");
+        if (statusEl) statusEl.textContent = message;
     }
+
+    function startScanner() {
+        if (typeof Html5Qrcode === "undefined") {
+            updateStatus("Scanner library failed to load. Please use manual entry.");
+            return;
+        }
+
+        if (html5QrCode) {
+            html5QrCode.clear().catch(() => {});
+        }
+
+        html5QrCode = new Html5Qrcode("reader");
+        updateStatus("Requesting camera access...");
+
+        // Prefer back camera on mobile
+        html5QrCode.start(
+            { facingMode: "environment" },
+            config,
+            onScanSuccess,
+            () => {} // ignore continuous scan failures
+        ).then(() => {
+            updateStatus("Camera ready — point at a barcode");
+        }).catch((err) => {
+            console.warn("Back camera failed, trying alternative camera...", err);
+            updateStatus("Trying alternative camera...");
+
+            html5QrCode.start(
+                { facingMode: "user" },
+                config,
+                onScanSuccess,
+                () => {}
+            ).then(() => {
+                updateStatus("Camera ready — point at a barcode");
+            }).catch((fallbackErr) => {
+                console.error("Camera error:", fallbackErr);
+                updateStatus("Camera access failed. Please use manual entry or allow camera permission.");
+            });
+        });
+    }
+
+    function stopScanner() {
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().catch(() => {});
+        }
+    }
+
+    function onScanSuccess(decodedText) {
+        // Prevent multiple rapid triggers
+        if (decodedText === lastScannedCode) return;
+        lastScannedCode = decodedText;
+
+        triggerScanFeedback();
+        stopScanner();
+        updateStatus("Code detected!");
+
+        document.getElementById("result").classList.remove("hidden");
+        document.getElementById("scanned-code").textContent = decodedText;
+
+        // Auto-search after a short delay
+        setTimeout(() => {
+            searchCode(decodedText);
+        }, 800);
+    }
+
+    function handleManualSubmit(event) {
+        event.preventDefault();
+        const value = document.getElementById("manualCodeInput").value.trim();
+        if (value) {
+            onScanSuccess(value);
+        }
+    }
+
+    function searchCode(code) {
+        // Redirect to batch list searching by the scanned code
+        window.location.href = "{% url 'inventory:batch_list' %}?q=" + encodeURIComponent(code);
+    }
+
+    function resetScanner() {
+        lastScannedCode = "";
+        document.getElementById("result").classList.add("hidden");
+        document.getElementById("manualCodeInput").value = "";
+        document.getElementById("scanned-code").textContent = "";
+        startScanner();
+    }
+
+    // Wire up the Search button and start camera
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("search-btn").addEventListener("click", () => {
+            if (lastScannedCode) {
+                searchCode(lastScannedCode);
+            }
+        });
+
+        setTimeout(startScanner, 300);
+    });
 </script>
 {% endblock %}
