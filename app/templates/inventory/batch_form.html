@@ -19,7 +19,7 @@
                  selectedId: '{{ form.product.value|default:'' }}',
                  selectedLabel: '',
                  init() {
-                     if (this.selectedId) {
+                     if (this.selectedId && this.$refs.options) {
                          const match = this.$refs.options.querySelector(`[data-id='${this.selectedId}']`);
                          if (match) {
                              this.selectedLabel = match.dataset.label;
@@ -96,21 +96,20 @@
             </div>
             {% endif %}
 
-
             <!-- Remaining Form Fields (preserving exact form field order) -->
             {% for field in form %}
                 {% if field.name == 'product' %}
                     {# Rendered above #}
                 {% elif field.name == 'batch_number' %}
                     <div class="erp-field"
-                        x-data="batchScanner('{{ field.id_for_label }}')"
-                        @keydown.escape.window="if (scannerOpen) closeScanner()">
+                         x-data="batchScanner('{{ field.id_for_label }}')"
+                         @keydown.escape.window="if (scannerOpen) closeScanner()">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
                             {{ field.label_tag }}
                             <span x-show="justScanned"
-                                x-cloak
-                                class="badge badge-success"
-                                style="font-size: 0.68rem;">
+                                  x-cloak
+                                  class="badge badge-success"
+                                  style="font-size: 0.68rem;">
                                 ✓ Scanned
                             </span>
                         </div>
@@ -130,22 +129,19 @@
 
                         <!-- Compact Inline Camera Drawer -->
                         <div x-show="scannerOpen"
-                            x-cloak
-                            x-transition.opacity.duration.150ms
-                            style="margin-top: 0.45rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-soft); display: grid; gap: 0.6rem;">
+                             x-cloak
+                             style="margin-top: 0.45rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-soft); display: grid; gap: 0.6rem;">
                             <div id="batch-qr-reader"
-                                style="width: 100%; max-width: 340px; margin-inline: auto; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--surface-strong);">
+                                 style="width: 100%; max-width: 340px; min-height: 220px; margin-inline: auto; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--surface-strong);">
                             </div>
 
                             <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
                                 <p class="erp-help" style="margin: 0;" x-text="statusText"></p>
 
                                 <button type="button"
-                                        x-show="cameras.length > 1"
-                                        x-cloak
-                                        @click="switchCamera()"
+                                        @click="flipCamera()"
                                         class="btn-secondary btn-sm">
-                                    🔄 Switch Camera
+                                    🔄 Flip Camera
                                 </button>
                             </div>
                         </div>
@@ -157,7 +153,6 @@
                         <p class="erp-error">{{ error }}</p>
                         {% endfor %}
                     </div>
-
                 {% else %}
                     <div class="erp-field">
                         {{ field.label_tag }}
@@ -182,9 +177,9 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://unpkg.com" defer></script>
+<script src="https://unpkg.com"></script>
 <script>
-    function triggerScanFeedback() {
+    function triggerBatchScanFeedback() {
         if (navigator.vibrate) {
             navigator.vibrate(100);
         }
@@ -209,110 +204,112 @@
         return {
             scannerOpen: false,
             justScanned: false,
-            statusText: 'Initializing camera...',
-            html5Qr: null,
-            cameras: [],
-            currentCameraIndex: 0,
+            statusText: 'Starting camera...',
+            html5QrCode: null,
+            facingMode: 'environment',
 
             toggleScanner() {
-                this.scannerOpen ? this.closeScanner() : this.openScanner();
-            },
-
-            async loadCameras() {
-                if (this.cameras.length > 0) return;
-                try {
-                    const devices = await Html5Qrcode.getCameras();
-                    if (devices && devices.length > 0) {
-                        this.cameras = devices;
-                        const backIdx = devices.findIndex(d =>
-                            /back|rear|environment/i.test(d.label)
-                        );
-                        this.currentCameraIndex = backIdx !== -1 ? backIdx : 0;
-                    }
-                } catch (e) {}
-            },
-
-            async startStream() {
-                if (this.html5Qr && this.html5Qr.isScanning) {
-                    await this.html5Qr.stop();
-                    this.html5Qr.clear();
+                if (this.scannerOpen) {
+                    this.closeScanner();
+                } else {
+                    this.openScanner();
                 }
-
-                this.html5Qr = new Html5Qrcode('batch-qr-reader');
-                const cameraConfig = this.cameras.length > 0
-                    ? this.cameras[this.currentCameraIndex].id
-                    : { facingMode: 'environment' };
-
-                await this.html5Qr.start(
-                    cameraConfig,
-                    { fps: 10, qrbox: { width: 220, height: 110 } },
-                    (decodedText) => {
-                        const value = (decodedText || '').trim();
-                        if (!value) return;
-
-                        triggerScanFeedback();
-
-                        const input = document.getElementById(inputId);
-                        if (input) {
-                            input.value = value;
-                            input.dispatchEvent(new Event('input', { bubbles: true }));
-                            input.dispatchEvent(new Event('change', { bubbles: true }));
-                            input.focus();
-                        }
-
-                        this.justScanned = true;
-                        this.closeScanner();
-                    },
-                    () => {}
-                );
-
-                const activeLabel = this.cameras[this.currentCameraIndex]?.label;
-                this.statusText = activeLabel
-                    ? `Active: ${activeLabel}`
-                    : 'Align barcode or QR code inside the box.';
             },
 
-            async openScanner() {
+            openScanner() {
+                this.scannerOpen = true;
+                this.justScanned = false;
+                this.statusText = 'Requesting camera access...';
+
+                this.$nextTick(() => {
+                    setTimeout(() => this.startScanner(), 150);
+                });
+            },
+
+            startScanner() {
                 if (typeof Html5Qrcode === 'undefined') {
-                    this.scannerOpen = true;
-                    this.statusText = 'Scanner library failed to load. Enter batch number manually.';
+                    this.statusText = 'Scanner library failed to load. Please enter batch number manually.';
                     return;
                 }
 
-                this.scannerOpen = true;
-                this.justScanned = false;
-                this.statusText = 'Starting camera...';
-
-                await this.$nextTick();
-
-                try {
-                    await this.loadCameras();
-                    await this.startStream();
-                } catch (err) {
-                    this.statusText = 'Camera unavailable or permission denied. Type batch number manually.';
-                }
-            },
-
-            async switchCamera() {
-                if (this.cameras.length < 2) return;
-                this.currentCameraIndex = (this.currentCameraIndex + 1) % this.cameras.length;
-                this.statusText = 'Switching camera...';
-                try {
-                    await this.startStream();
-                } catch (err) {
-                    this.statusText = 'Unable to switch camera.';
-                }
-            },
-
-            async closeScanner() {
-                if (this.html5Qr) {
+                if (this.html5QrCode) {
                     try {
-                        if (this.html5Qr.isScanning) {
-                            await this.html5Qr.stop();
-                        }
-                        this.html5Qr.clear();
+                        this.html5QrCode.clear();
                     } catch (e) {}
-                    this.html5Qr = null;
+                }
+
+                this.html5QrCode = new Html5Qrcode('batch-qr-reader');
+                const config = {
+                    fps: 10,
+                    qrbox: { width: 220, height: 120 }
+                };
+
+                const onDetected = (decodedText) => {
+                    const value = (decodedText || '').trim();
+                    if (!value) return;
+
+                    triggerBatchScanFeedback();
+
+                    const input = document.getElementById(inputId);
+                    if (input) {
+                        input.value = value;
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                        input.focus();
+                    }
+
+                    this.justScanned = true;
+                    this.closeScanner();
+                };
+
+                this.html5QrCode.start(
+                    { facingMode: this.facingMode },
+                    config,
+                    onDetected,
+                    () => {}
+                ).then(() => {
+                    this.statusText = 'Camera ready — align barcode or QR code inside the box.';
+                }).catch((err) => {
+                    console.warn('Primary camera failed, trying alternative camera...', err);
+                    const fallbackMode = this.facingMode === 'environment' ? 'user' : 'environment';
+                    this.statusText = 'Trying alternative camera...';
+
+                    this.html5QrCode.start(
+                        { facingMode: fallbackMode },
+                        config,
+                        onDetected,
+                        () => {}
+                    ).then(() => {
+                        this.facingMode = fallbackMode;
+                        this.statusText = 'Camera ready — align barcode or QR code inside the box.';
+                    }).catch((fallbackErr) => {
+                        console.error('Camera error:', fallbackErr);
+                        this.statusText = 'Camera access failed. Please use manual entry or allow camera permission.';
+                    });
+                });
+            },
+
+            async flipCamera() {
+                this.facingMode = this.facingMode === 'environment' ? 'user' : 'environment';
+                this.statusText = 'Switching camera...';
+                if (this.html5QrCode && this.html5QrCode.isScanning) {
+                    try {
+                        await this.html5QrCode.stop();
+                    } catch (e) {}
+                }
+                this.startScanner();
+            },
+
+            closeScanner() {
+                if (this.html5QrCode) {
+                    if (this.html5QrCode.isScanning) {
+                        this.html5QrCode.stop().then(() => {
+                            try { this.html5QrCode.clear(); } catch (e) {}
+                        }).catch(() => {});
+                    } else {
+                        try { this.html5QrCode.clear(); } catch (e) {}
+                    }
+                    this.html5QrCode = null;
                 }
                 this.scannerOpen = false;
             }
