@@ -123,7 +123,7 @@
                                     style="flex: 0 0 auto; white-space: nowrap;"
                                     @click="toggleScanner()"
                                     :aria-expanded="scannerOpen">
-                                <span x-text="scannerOpen ? '✕ Close' : '📷 Scan'"></span>
+                                <span x-text="scannerOpen ? '✕ Close' : '📷 Scan'">📷 Scan</span>
                             </button>
                         </div>
 
@@ -132,7 +132,7 @@
                              x-cloak
                              style="margin-top: 0.45rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-soft); display: grid; gap: 0.6rem;">
                             <div id="batch-qr-reader"
-                                 style="width: 100%; max-width: 340px; min-height: 220px; margin-inline: auto; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--surface-strong);">
+                                 style="width: 100%; max-width: 340px; min-height: 240px; margin-inline: auto; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--surface-strong);">
                             </div>
 
                             <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
@@ -179,6 +179,9 @@
 {% block extra_js %}
 <script src="https://unpkg.com"></script>
 <script>
+    // Kept outside Alpine's reactive x-data so Html5Qrcode is never wrapped in a Proxy
+    let batchHtml5QrCode = null;
+
     function triggerBatchScanFeedback() {
         if (navigator.vibrate) {
             navigator.vibrate(100);
@@ -200,12 +203,25 @@
         } catch (e) {}
     }
 
+    function stopBatchCameraInstance() {
+        if (!batchHtml5QrCode) return Promise.resolve();
+        const instance = batchHtml5QrCode;
+        batchHtml5QrCode = null;
+
+        if (instance.isScanning) {
+            return instance.stop()
+                .then(() => { try { instance.clear(); } catch (e) {} })
+                .catch(() => { try { instance.clear(); } catch (e) {} });
+        }
+        try { instance.clear(); } catch (e) {}
+        return Promise.resolve();
+    }
+
     function batchScanner(inputId) {
         return {
             scannerOpen: false,
             justScanned: false,
             statusText: 'Starting camera...',
-            html5QrCode: null,
             facingMode: 'environment',
 
             toggleScanner() {
@@ -222,26 +238,35 @@
                 this.statusText = 'Requesting camera access...';
 
                 this.$nextTick(() => {
-                    setTimeout(() => this.startScanner(), 150);
+                    // Wait until the drawer is visible and has a non-zero painted width
+                    requestAnimationFrame(() => {
+                        setTimeout(() => this.startScanner(), 200);
+                    });
                 });
             },
 
-            startScanner() {
+            async startScanner() {
                 if (typeof Html5Qrcode === 'undefined') {
                     this.statusText = 'Scanner library failed to load. Please enter batch number manually.';
                     return;
                 }
 
-                if (this.html5QrCode) {
-                    try {
-                        this.html5QrCode.clear();
-                    } catch (e) {}
+                const readerEl = document.getElementById('batch-qr-reader');
+                if (!readerEl || readerEl.clientWidth === 0) {
+                    setTimeout(() => this.startScanner(), 150);
+                    return;
                 }
 
-                this.html5QrCode = new Html5Qrcode('batch-qr-reader');
+                await stopBatchCameraInstance();
+                batchHtml5QrCode = new Html5Qrcode('batch-qr-reader');
+
                 const config = {
                     fps: 10,
-                    qrbox: { width: 220, height: 120 }
+                    qrbox: (viewfinderWidth, viewfinderHeight) => {
+                        const w = Math.max(160, Math.min(240, Math.floor(viewfinderWidth * 0.78)));
+                        const h = Math.max(100, Math.min(140, Math.floor(viewfinderHeight * 0.55)));
+                        return { width: w, height: h };
+                    }
                 };
 
                 const onDetected = (decodedText) => {
@@ -262,7 +287,7 @@
                     this.closeScanner();
                 };
 
-                this.html5QrCode.start(
+                batchHtml5QrCode.start(
                     { facingMode: this.facingMode },
                     config,
                     onDetected,
@@ -274,7 +299,7 @@
                     const fallbackMode = this.facingMode === 'environment' ? 'user' : 'environment';
                     this.statusText = 'Trying alternative camera...';
 
-                    this.html5QrCode.start(
+                    batchHtml5QrCode.start(
                         { facingMode: fallbackMode },
                         config,
                         onDetected,
@@ -292,25 +317,11 @@
             async flipCamera() {
                 this.facingMode = this.facingMode === 'environment' ? 'user' : 'environment';
                 this.statusText = 'Switching camera...';
-                if (this.html5QrCode && this.html5QrCode.isScanning) {
-                    try {
-                        await this.html5QrCode.stop();
-                    } catch (e) {}
-                }
-                this.startScanner();
+                await this.startScanner();
             },
 
-            closeScanner() {
-                if (this.html5QrCode) {
-                    if (this.html5QrCode.isScanning) {
-                        this.html5QrCode.stop().then(() => {
-                            try { this.html5QrCode.clear(); } catch (e) {}
-                        }).catch(() => {});
-                    } else {
-                        try { this.html5QrCode.clear(); } catch (e) {}
-                    }
-                    this.html5QrCode = null;
-                }
+            async closeScanner() {
+                await stopBatchCameraInstance();
                 this.scannerOpen = false;
             }
         };
