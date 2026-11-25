@@ -177,10 +177,53 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://unpkg.com"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
     // Kept outside Alpine's reactive x-data so Html5Qrcode is never wrapped in a Proxy
     let batchHtml5QrCode = null;
+
+    function getHtml5QrcodeClass() {
+        if (typeof Html5Qrcode !== 'undefined') return Html5Qrcode;
+        if (window.Html5Qrcode) return window.Html5Qrcode;
+        if (window.__Html5QrcodeLibrary__ && window.__Html5QrcodeLibrary__.Html5Qrcode) {
+            return window.__Html5QrcodeLibrary__.Html5Qrcode;
+        }
+        return null;
+    }
+
+    function ensureScannerLibrary() {
+        const existing = getHtml5QrcodeClass();
+        if (existing) return Promise.resolve(existing);
+
+        const urls = [
+            'https://unpkg.com',
+            'https://jsdelivr.net'
+        ];
+
+        return new Promise((resolve, reject) => {
+            let index = 0;
+
+            function tryNext() {
+                const loaded = getHtml5QrcodeClass();
+                if (loaded) return resolve(loaded);
+                if (index >= urls.length) {
+                    return reject(new Error('Could not load scanner library from CDN'));
+                }
+
+                const script = document.createElement('script');
+                script.src = urls[index++];
+                script.async = true;
+                script.onload = () => {
+                    const cls = getHtml5QrcodeClass();
+                    cls ? resolve(cls) : tryNext();
+                };
+                script.onerror = () => tryNext();
+                document.head.appendChild(script);
+            }
+
+            tryNext();
+        });
+    }
 
     function triggerBatchScanFeedback() {
         if (navigator.vibrate) {
@@ -235,10 +278,9 @@
             openScanner() {
                 this.scannerOpen = true;
                 this.justScanned = false;
-                this.statusText = 'Requesting camera access...';
+                this.statusText = 'Loading scanner...';
 
                 this.$nextTick(() => {
-                    // Wait until the drawer is visible and has a non-zero painted width
                     requestAnimationFrame(() => {
                         setTimeout(() => this.startScanner(), 200);
                     });
@@ -246,8 +288,11 @@
             },
 
             async startScanner() {
-                if (typeof Html5Qrcode === 'undefined') {
-                    this.statusText = 'Scanner library failed to load. Please enter batch number manually.';
+                let QrClass;
+                try {
+                    QrClass = await ensureScannerLibrary();
+                } catch (libErr) {
+                    this.statusText = 'Scanner library failed to load (check internet/CSP). Enter batch number manually.';
                     return;
                 }
 
@@ -257,8 +302,9 @@
                     return;
                 }
 
+                this.statusText = 'Requesting camera access...';
                 await stopBatchCameraInstance();
-                batchHtml5QrCode = new Html5Qrcode('batch-qr-reader');
+                batchHtml5QrCode = new QrClass('batch-qr-reader');
 
                 const config = {
                     fps: 10,
@@ -295,7 +341,6 @@
                 ).then(() => {
                     this.statusText = 'Camera ready — align barcode or QR code inside the box.';
                 }).catch((err) => {
-                    console.warn('Primary camera failed, trying alternative camera...', err);
                     const fallbackMode = this.facingMode === 'environment' ? 'user' : 'environment';
                     this.statusText = 'Trying alternative camera...';
 
@@ -307,8 +352,7 @@
                     ).then(() => {
                         this.facingMode = fallbackMode;
                         this.statusText = 'Camera ready — align barcode or QR code inside the box.';
-                    }).catch((fallbackErr) => {
-                        console.error('Camera error:', fallbackErr);
+                    }).catch(() => {
                         this.statusText = 'Camera access failed. Please use manual entry or allow camera permission.';
                     });
                 });
@@ -328,3 +372,4 @@
     }
 </script>
 {% endblock %}
+

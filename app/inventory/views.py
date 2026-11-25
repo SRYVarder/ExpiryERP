@@ -355,12 +355,13 @@ def batch_list(request, product_icode=None):
     else:
         batches = Batch.objects.filter(product__branch=branch).select_related("product")
 
-    search_query = request.GET.get("search", "").strip()
+    search_query = (request.GET.get("q") or request.GET.get("search") or "").strip()
     if search_query:
         batches = batches.filter(
             Q(batch_number__icontains=search_query)
             | Q(product__name__icontains=search_query)
             | Q(product__icode__icontains=search_query)
+            | Q(product__scode__icontains=search_query)
         )
 
     batches = batches.order_by("expiry_date")

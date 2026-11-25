@@ -21,7 +21,7 @@
         </div>
     </header>
 
-    <div style="max-width: 960px; width: 100%; margin-inline: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem; align-items: start;">
+    <div class="scanner-grid">
         <!-- Scanner Viewport -->
         <article class="glass-card" style="display: grid; gap: 1rem;">
             <div id="reader"
@@ -95,6 +95,28 @@
         </div>
     </div>
 </div>
+<style>
+    .scanner-grid {
+        max-width: 960px;
+        width: 100%;
+        margin-inline: auto;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1.25rem;
+        align-items: start;
+    }
+
+    .scanner-grid > * {
+        min-width: 0;
+    }
+
+    @media (max-width: 768px) {
+        .scanner-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
 {% endblock %}
 
 {% block extra_js %}
