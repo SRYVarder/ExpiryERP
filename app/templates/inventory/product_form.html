@@ -4,35 +4,102 @@
 
 {% block content %}
 <div class="erp-page">
-    <header class="erp-header" style="max-width: 680px; width: 100%; margin-inline: auto;">
+    <!-- Header -->
+    <header class="erp-header" style="max-width: 720px; width: 100%; margin-inline: auto;">
         <div>
             <p class="erp-eyebrow">Master product catalog</p>
             <h1 class="erp-title">{{ title|default:"Manage Product" }}</h1>
         </div>
-        <a href="{% url 'inventory:product_list' %}" class="btn-secondary">← Back to Products</a>
+        <div class="erp-actions">
+            <a href="{% url 'inventory:product_list' %}" class="btn-secondary">
+                ← Back to Products
+            </a>
+        </div>
     </header>
 
-    <article class="glass-card erp-form-card">
+    <!-- Form Card -->
+    <article class="glass-card" style="max-width: 720px; width: 100%; margin-inline: auto;">
         <form method="post" class="erp-form-grid">
             {% csrf_token %}
 
             {% if form.non_field_errors %}
-            <div class="erp-alert-box">{{ form.non_field_errors.as_text }}</div>
+            <div class="erp-error">
+                {{ form.non_field_errors.as_text }}
+            </div>
             {% endif %}
 
             {% for field in form %}
-            <div class="erp-field">
-                <label for="{{ field.id_for_label }}">
-                    {{ field.label }} {% if field.field.required %}*{% endif %}
-                </label>
-                {{ field }}
-                {% if field.help_text %}
-                <p class="erp-help">{{ field.help_text }}</p>
+                {% if field.name == 'scode' %}
+                    <div class="erp-field"
+                         x-data="scodeScanner('{{ field.id_for_label }}')"
+                         @keydown.escape.window="if (scannerOpen) closeScanner()">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                            <label for="{{ field.id_for_label }}">
+                                {{ field.label }} {% if field.field.required %}*{% endif %}
+                            </label>
+                            <span x-show="justScanned"
+                                  x-cloak
+                                  class="badge badge-success"
+                                  style="font-size: 0.68rem;">
+                                ✓ Scanned
+                            </span>
+                        </div>
+
+                        <div style="display: flex; gap: 0.5rem; align-items: stretch;">
+                            <div style="flex: 1; min-width: 0;">
+                                {{ field }}
+                            </div>
+                            <button type="button"
+                                    class="btn-secondary"
+                                    style="flex: 0 0 auto; white-space: nowrap;"
+                                    @click="toggleScanner()"
+                                    :aria-expanded="scannerOpen">
+                                <span x-text="scannerOpen ? '✕ Close' : '📷 Scan'"></span>
+                            </button>
+                        </div>
+
+                        <!-- Compact Inline Camera Drawer -->
+                        <div x-show="scannerOpen"
+                             x-cloak
+                             style="margin-top: 0.45rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-soft);">
+                            <div style="display: grid; gap: 0.6rem;">
+                                <div id="scode-qr-reader"
+                                     style="width: 100%; max-width: 340px; min-height: 220px; margin-inline: auto; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--surface-strong);">
+                                </div>
+
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                                    <p class="erp-help" style="margin: 0;" x-text="statusText"></p>
+
+                                    <button type="button"
+                                            @click="flipCamera()"
+                                            class="btn-secondary btn-sm">
+                                        🔄 Flip Camera
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if field.help_text %}
+                        <p class="erp-help">{{ field.help_text }}</p>
+                        {% endif %}
+                        {% for error in field.errors %}
+                        <p class="erp-error">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="erp-field">
+                        <label for="{{ field.id_for_label }}">
+                            {{ field.label }} {% if field.field.required %}*{% endif %}
+                        </label>
+                        {{ field }}
+                        {% if field.help_text %}
+                        <p class="erp-help">{{ field.help_text }}</p>
+                        {% endif %}
+                        {% for error in field.errors %}
+                        <p class="erp-error">{{ error }}</p>
+                        {% endfor %}
+                    </div>
                 {% endif %}
-                {% for error in field.errors %}
-                <p class="erp-error">{{ error }}</p>
-                {% endfor %}
-            </div>
             {% endfor %}
 
             <div class="erp-actions" style="margin-top: 0.5rem;">
@@ -42,4 +109,145 @@
         </form>
     </article>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+    function triggerScodeScanFeedback() {
+        if (navigator.vibrate) {
+            navigator.vibrate(100);
+        }
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            gain.gain.setValueAtTime(0.12, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.12);
+        } catch (e) {}
+    }
+
+    function scodeScanner(inputId) {
+        let qrInstance = null;
+
+        return {
+            scannerOpen: false,
+            justScanned: false,
+            statusText: 'Starting camera...',
+            facingMode: 'environment',
+
+            toggleScanner() {
+                if (this.scannerOpen) {
+                    this.closeScanner();
+                } else {
+                    this.openScanner();
+                }
+            },
+
+            openScanner() {
+                this.scannerOpen = true;
+                this.justScanned = false;
+                this.statusText = 'Requesting camera access...';
+
+                this.$nextTick(() => {
+                    setTimeout(() => this.startScanner(), 200);
+                });
+            },
+
+            async stopInstance() {
+                if (qrInstance) {
+                    try {
+                        if (qrInstance.isScanning) {
+                            await qrInstance.stop();
+                        }
+                        qrInstance.clear();
+                    } catch (e) {}
+                    qrInstance = null;
+                }
+            },
+
+            async startScanner() {
+                if (typeof Html5Qrcode === 'undefined') {
+                    this.statusText = 'Scanner library failed to load. Please enter S-code manually.';
+                    return;
+                }
+
+                await this.stopInstance();
+
+                qrInstance = new Html5Qrcode('scode-qr-reader');
+                const config = {
+                    fps: 10,
+                    qrbox: (viewfinderWidth, viewfinderHeight) => ({
+                        width: Math.min(220, Math.floor(viewfinderWidth * 0.8)),
+                        height: Math.min(120, Math.floor(viewfinderHeight * 0.6))
+                    })
+                };
+
+                const onDetected = (decodedText) => {
+                    const value = (decodedText || '').trim();
+                    if (!value) return;
+
+                    triggerScodeScanFeedback();
+
+                    const input = document.getElementById(inputId);
+                    if (input) {
+                        input.value = value;
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                        input.focus();
+                    }
+
+                    this.justScanned = true;
+                    this.closeScanner();
+                };
+
+                qrInstance.start(
+                    { facingMode: this.facingMode },
+                    config,
+                    onDetected,
+                    () => {}
+                ).then(() => {
+                    this.statusText = 'Camera ready — align barcode or QR code inside the box.';
+                }).catch((err) => {
+                    console.warn('Primary camera failed, trying alternative camera...', err);
+                    const fallbackMode = this.facingMode === 'environment' ? 'user' : 'environment';
+                    this.statusText = 'Trying alternative camera...';
+
+                    qrInstance.start(
+                        { facingMode: fallbackMode },
+                        config,
+                        onDetected,
+                        () => {}
+                    ).then(() => {
+                        this.facingMode = fallbackMode;
+                        this.statusText = 'Camera ready — align barcode or QR code inside the box.';
+                    }).catch((fallbackErr) => {
+                        console.error('Camera error:', fallbackErr);
+                        this.statusText = 'Camera access failed. Please use manual entry or allow camera permission.';
+                    });
+                });
+            },
+
+            async flipCamera() {
+                this.facingMode = this.facingMode === 'environment' ? 'user' : 'environment';
+                this.statusText = 'Switching camera...';
+                await this.stopInstance();
+                this.startScanner();
+            },
+
+            async closeScanner() {
+                await this.stopInstance();
+                this.scannerOpen = false;
+            }
+        };
+    }
+</script>
 {% endblock %}

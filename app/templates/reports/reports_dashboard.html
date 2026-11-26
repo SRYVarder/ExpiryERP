@@ -8,7 +8,7 @@
         <div>
             <p class="erp-eyebrow">Business intelligence</p>
             <h1 class="erp-title">Reports Center</h1>
-            <p class="erp-subtitle">Generate real-time inventory health and FEFO expiry exports.</p>
+            <p class="erp-subtitle">Generate real-time inventory health and FIFO expiry exports.</p>
         </div>
 
         <div class="erp-actions">
@@ -24,14 +24,14 @@
                 ⏰
             </span>
             <div style="flex: 1;">
-                <p class="erp-eyebrow" style="margin-bottom: 0.25rem;">FEFO Schedule</p>
+                <p class="erp-eyebrow" style="margin-bottom: 0.25rem;">FIFO Schedule</p>
                 <h3 style="margin: 0; font-size: 1.15rem; font-weight: 760; color: var(--text);">Expiry Report</h3>
                 <p class="erp-subtitle" style="margin-top: 0.35rem;">View and export batches expiring soon</p>
             </div>
             <span style="color: var(--muted); font-size: 1.15rem;">↗</span>
         </a>
 
-        <a href="{% url 'reports:stock_vs_expiry_report' %}"
+        <a href="{% url 'reports:stock_expiry_report' %}"
            class="glass-card"
            style="display: flex; align-items: flex-start; gap: 1rem; text-decoration: none; transition: transform 170ms ease, border-color 170ms ease;">
             <span style="width: 48px; height: 48px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 15px; background: var(--accent-soft); font-size: 1.4rem;">

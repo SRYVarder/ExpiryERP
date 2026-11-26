@@ -504,9 +504,9 @@ def bulk_product_upload(request):
 
                 expected_headers = [
                     "Name", "Scode", "Category", "UoM",
-                    "Selling Price", "Cost Price", "Reorder Level"
+                    "Selling Price", "Cost Price"
                 ]
-                actual_headers = [str(cell).strip() if cell is not None else "" for cell in rows[0][:7]]
+                actual_headers = [str(cell).strip() if cell is not None else "" for cell in rows[0][:6]]
 
                 if actual_headers != expected_headers:
                     messages.error(
@@ -524,7 +524,7 @@ def bulk_product_upload(request):
                         if not any(row[:7]):
                             continue
 
-                        name, scode, cat_name, uom, selling_price, cost_price, reorder_level = row[:7]
+                        name, scode, cat_name, uom, selling_price, cost_price = row[:6]
 
                         if not name:
                             row_errors.append(f"Row {row_idx}: Product 'Name' is required.")
@@ -543,7 +543,6 @@ def bulk_product_upload(request):
                         try:
                             selling_dec = Decimal(str(selling_price or 0))
                             cost_dec = Decimal(str(cost_price or 0))
-                            reorder_int = int(float(reorder_level or 0))
                         except (InvalidOperation, ValueError):
                             row_errors.append(
                                 f"Row {row_idx} ({name}): Invalid numeric value in price or reorder level."
@@ -552,11 +551,12 @@ def bulk_product_upload(request):
 
                         defaults = {
                             "name": name,
+
+                            "scode": scode,
                             "category": category,
                             "uom": uom,
                             "selling_price": selling_dec,
                             "cost_price": cost_dec,
-                            "reorder_level": reorder_int,
                         }
 
                         if scode:

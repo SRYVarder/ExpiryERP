@@ -76,8 +76,8 @@
                     {% for p in form.product.field.queryset %}
                     <button type="button"
                             data-id="{{ p.pk }}"
-                            data-label="{{ p.icode }} - {{ p.name }}"
-                            x-show="!search || '{{ p.icode|escapejs }} - {{ p.name|escapejs }}'.toLowerCase().includes(search.toLowerCase())"
+                            data-label="{{ p.icode }} - {{ p.name }} - {{ p.scode }}"
+                            x-show="!search || '{{ p.icode|escapejs }} - {{ p.name|escapejs }} - {{ p.scode|escapejs }}'.toLowerCase().includes(search.toLowerCase())"
                             @click="selectProduct('{{ p.pk }}', '{{ p.icode|escapejs }} - {{ p.name|escapejs }}')"
                             class="dropdown-link"
                             style="width: 100%; border: 0; background: transparent; cursor: pointer; text-align: left;">
