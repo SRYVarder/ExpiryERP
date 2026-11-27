@@ -170,6 +170,13 @@ def expired_batches_view(request):
         "total_count": expired_batches.count(),
     })
 
+@login_required
+def scanner(request):
+    context = {
+        'title': 'Barcode Scanner',
+    }
+
+    return render(request, 'inventory/scanner.html')
 
 @login_required
 def product_list(request):
@@ -204,13 +211,7 @@ def product_list(request):
         "total_products": products.count(),
     })
 
-@login_required
-def scanner(request):
-    context = {
-        'title': 'Barcode Scanner',
-    }
 
-    return render(request, 'inventory/scanner.html')
 
 # Optional: Quick view for single product with all its batches
 @login_required
@@ -467,23 +468,6 @@ def batch_delete(request, pk):
 
 # ===================== BULK PRODUCT UPLOAD =====================
 
-def _parse_excel_date(value):
-    """Safely convert Excel cell values (date, datetime, or YYYY-MM-DD string) to a Python date."""
-    if value in (None, ""):
-        return None
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, date):
-        return value
-    if isinstance(value, str):
-        cleaned = value.strip()
-        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"):
-            try:
-                return datetime.strptime(cleaned, fmt).date()
-            except ValueError:
-                continue
-    raise ValueError(f"Invalid date format: '{value}'. Expected YYYY-MM-DD.")
-
 @login_required
 def bulk_product_upload(request):
     """Import products from Excel strictly into the user's active branch."""
@@ -491,100 +475,122 @@ def bulk_product_upload(request):
 
     if request.method == "POST":
         form = BulkProductUploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            uploaded_file = next(iter(request.FILES.values()))
-            try:
-                wb = openpyxl.load_workbook(uploaded_file, data_only=True)
-                ws = wb.active
+        if not form.is_valid():
+            messages.error(request, "Please select a valid Excel (.xlsx) file.")
+            return render(request, "inventory/bulk_product_upload.html", {
+                "form": form,
+                "title": "Bulk Product Upload",
+            })
 
-                rows = list(ws.iter_rows(values_only=True))
-                if not rows:
-                    messages.error(request, "The uploaded spreadsheet is empty.")
-                    return redirect("inventory:bulk_product_upload")
+        uploaded_file = next(iter(request.FILES.values()))
+        try:
+            wb = openpyxl.load_workbook(uploaded_file, data_only=True)
+            ws = wb.active
 
-                expected_headers = [
-                    "Name", "Scode", "Category", "UoM",
-                    "Selling Price", "Cost Price"
-                ]
-                actual_headers = [str(cell).strip() if cell is not None else "" for cell in rows[0][:6]]
+            rows = list(ws.iter_rows(values_only=True))
+            if not rows:
+                messages.error(request, "The uploaded spreadsheet is empty.")
+                return redirect("inventory:bulk_product_upload")
 
-                if actual_headers != expected_headers:
-                    messages.error(
-                        request,
-                        f"Invalid column headers. Expected: {', '.join(expected_headers)}"
-                    )
-                    return redirect("inventory:bulk_product_upload")
+            expected_headers = [
+                "Name", "Scode", "Category", "UoM",
+                "Selling Price", "Cost Price"
+            ]
+            actual_headers = [
+                str(cell).strip() if cell is not None else ""
+                for cell in rows[0][:6]
+            ]
 
-                created_count = 0
-                updated_count = 0
-                row_errors = []
-
-                with transaction.atomic():
-                    for row_idx, row in enumerate(rows[1:], start=2):
-                        if not any(row[:7]):
-                            continue
-
-                        name, scode, cat_name, uom, selling_price, cost_price = row[:6]
-
-                        if not name:
-                            row_errors.append(f"Row {row_idx}: Product 'Name' is required.")
-                            continue
-
-                        name = str(name).strip()
-                        scode = str(scode).strip() if scode not in (None, "") else ""
-                        uom = str(uom).strip() if uom not in (None, "") else "pcs"
-
-                        category = None
-                        if cat_name not in (None, ""):
-                            category, _ = Category.objects.get_or_create(
-                                name=str(cat_name).strip()
-                            )
-
-                        try:
-                            selling_dec = Decimal(str(selling_price or 0))
-                            cost_dec = Decimal(str(cost_price or 0))
-                        except (InvalidOperation, ValueError):
-                            row_errors.append(
-                                f"Row {row_idx} ({name}): Invalid numeric value in price or reorder level."
-                            )
-                            continue
-
-                        defaults = {
-                            "name": name,
-
-                            "scode": scode,
-                            "category": category,
-                            "uom": uom,
-                            "selling_price": selling_dec,
-                            "cost_price": cost_dec,
-                        }
-
-                        if scode:
-                            _, created = Product.objects.update_or_create(
-                                branch=branch,
-                                scode=scode,
-                                defaults=defaults,
-                            )
-                            if created:
-                                created_count += 1
-                            else:
-                                updated_count += 1
-                        else:
-                            Product.objects.create(branch=branch, scode="", **defaults)
-                            created_count += 1
-
-                if row_errors:
-                    for err in row_errors[:5]:
-                        messages.warning(request, err)
-
-                messages.success(
+            if actual_headers != expected_headers:
+                messages.error(
                     request,
-                    f"Bulk product upload for {branch.name} complete: {created_count} created, {updated_count} updated."
+                    f"Invalid column headers. Expected: {', '.join(expected_headers)}"
                 )
-                return redirect("inventory:product_list")
+                return redirect("inventory:bulk_product_upload")
 
-            except Exception as e:
-                messages.error(request, f"Failed to process Excel file: {str(e)}")
+            created_count = 0
+            updated_count = 0
+            row_errors = []
+
+            with transaction.atomic():
+                for row_idx, row in enumerate(rows[1:], start=2):
+                    # Pad row to at least 6 columns so unpacking never fails
+                    padded = list(row[:6]) + [None] * max(0, 6 - len(row))
+                    if not any(padded):
+                        continue
+
+                    name, scode, cat_name, uom, selling_price, cost_price = padded
+
+                    if not name or not str(name).strip():
+                        row_errors.append(f"Row {row_idx}: Product 'Name' is required.")
+                        continue
+
+                    name = str(name).strip()
+
+                    # Prevent Excel float barcodes like 615110001234.0
+                    if scode in (None, ""):
+                        scode = ""
+                    elif isinstance(scode, float) and scode.is_integer():
+                        scode = str(int(scode))
+                    else:
+                        scode = str(scode).strip()
+
+                    uom = str(uom).strip() if uom not in (None, "") else "pcs"
+
+                    category = None
+                    if cat_name not in (None, ""):
+                        category, _ = Category.objects.get_or_create(
+                            name=str(cat_name).strip()
+                            # Add branch=branch here if Category is branch-specific
+                        )
+
+                    try:
+                        sell_str = str(selling_price).replace(",", "").strip() if selling_price not in (None, "") else "0"
+                        cost_str = str(cost_price).replace(",", "").strip() if cost_price not in (None, "") else "0"
+                        selling_dec = Decimal(sell_str)
+                        cost_dec = Decimal(cost_str)
+                    except (InvalidOperation, ValueError):
+                        row_errors.append(
+                            f"Row {row_idx} ({name}): Invalid numeric value in Selling Price or Cost Price."
+                        )
+                        continue
+
+                    defaults = {
+                        "name": name,
+                        "scode": scode,
+                        "category": category,
+                        "uom": uom,
+                        "selling_price": selling_dec,
+                        "cost_price": cost_dec,
+                    }
+
+                    if scode:
+                        _, created = Product.objects.update_or_create(
+                            branch=branch,
+                            scode=scode,
+                            defaults=defaults,
+                        )
+                        if created:
+                            created_count += 1
+                        else:
+                            updated_count += 1
+                    else:
+                        # Do not pass scode="" again since it is already in defaults
+                        Product.objects.create(branch=branch, **defaults)
+                        created_count += 1
+
+            if row_errors:
+                for err in row_errors[:5]:
+                    messages.warning(request, err)
+
+            messages.success(
+                request,
+                f"Bulk product upload for {branch.name} complete: {created_count} created, {updated_count} updated."
+            )
+            return redirect("inventory:product_list")
+
+        except Exception as e:
+            messages.error(request, f"Failed to process Excel file: {str(e)}")
     else:
         form = BulkProductUploadForm()
 
@@ -592,6 +598,7 @@ def bulk_product_upload(request):
         "form": form,
         "title": "Bulk Product Upload",
     })
+
 
 # ===================== BULK BATCH UPLOAD =====================
 

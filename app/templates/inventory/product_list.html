@@ -21,11 +21,11 @@
     <section class="glass-card" style="display: grid; gap: 1.15rem;">
         <form method="get" class="erp-search-bar">
             <input type="text"
-                   name="q"
+                   name="search"
                    value="{{ search_query }}"
                    class="erp-input"
                    style="max-width: 340px;"
-                   placeholder="Search product name or Icode...">
+                   placeholder="Search product name, Icode, or Scode...">
             {% if category_filter %}
             <input type="hidden" name="category" value="{{ category_filter }}">
             {% endif %}
@@ -62,11 +62,11 @@
                         <td class="align-right cell-strong">{{ product.soh }}</td>
                         <td class="align-right">KES {{ product.selling_price|floatformat:2 }}</td>
                         <td class="align-right" style="white-space: nowrap;">
-                            <a href="{% url 'inventory:product_detail' product.pk %}" class="btn-secondary btn-sm">👁 View</a>
-                            <a href="{% url 'inventory:product_update' product.pk %}" class="btn-secondary btn-sm">✏ Edit</a>
+                            <a href="{% url 'inventory:product_detail' product.icode %}" class="btn-secondary btn-sm">👁 View</a>
+                            <a href="{% url 'inventory:product_update' product.icode %}" class="btn-secondary btn-sm">✏ Edit</a>
                             <button type="button"
                                     class="btn-danger btn-sm"
-                                    @click="deleteUrl = '{% url 'inventory:product_delete' product.pk %}'; deleteLabel = '{{ product.name|escapejs }} ({{ product.icode|escapejs }})'; deleteModalOpen = true">
+                                    @click="deleteUrl = '{% url 'inventory:product_delete' product.icode %}'; deleteLabel = '{{ product.name|escapejs }} ({{ product.icode|escapejs }})'; deleteModalOpen = true">
                                 🗑 Delete
                             </button>
                         </td>
@@ -85,21 +85,21 @@
             <span>Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
             <div class="erp-page-links">
                 {% if page_obj.has_previous %}
-                    <a href="?page=1{% if search_query %}&q={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn-secondary btn-sm">First</a>
-                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn-secondary btn-sm">Previous</a>
+                    <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn-secondary btn-sm">First</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn-secondary btn-sm">Previous</a>
                 {% endif %}
 
                 {% for num in page_obj.paginator.page_range %}
                     {% if page_obj.number == num %}
                         <span class="btn-primary btn-sm">{{ num }}</span>
                     {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                        <a href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn-secondary btn-sm">{{ num }}</a>
+                        <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn-secondary btn-sm">{{ num }}</a>
                     {% endif %}
                 {% endfor %}
 
                 {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn-secondary btn-sm">Next</a>
-                    <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&q={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn-secondary btn-sm">Last</a>
+                    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn-secondary btn-sm">Next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn-secondary btn-sm">Last</a>
                 {% endif %}
             </div>
         </nav>
